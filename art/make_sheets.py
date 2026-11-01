@@ -45,5 +45,12 @@ layout['trees1'] = {'ids': ['oak1', 'oak2', 'pine1', 'pine2', 'pine3', 'pine4', 
                             'dead1', 'dead2', 'dead3', 'willow1', 'willow2', 'dead4'], 'grid': [4, 4], 'out': 'props', 'sprite': True, 'max': 340}
 layout['trees2'] = {'ids': ['oak3', 'pine5', 'birch3', 'autumn3', 'oak4', 'pine6', 'birch4', 'autumn4', 'dead5', 'dead6',
                             'dead7', 'willow3', 'oak5', 'pine7', 'willow4', 'dead8'], 'grid': [4, 4], 'out': 'props', 'sprite': True, 'max': 340}
+layout['wild1'] = {'ids': ['boulder1', 'orerock1', 'orerock2', 'slab', 'herb_sunleaf', 'herb_moonpetal', 'herb_frostcap',
+                           'herb_emberroot', 'herb_ghostbloom', 'herb_bare', 'mushrooms', 'ferns', 'reeds', 'bones', 'stump', 'log'],
+                   'grid': [4, 4], 'out': 'props', 'sprite': True, 'max': 220}
+layout['town1'] = {'ids': ['forge', 'anvil', 'well', 'lamp', 'board', 'shrine', 'oven', 'crate', 'barrel', 'hay', 'tomb1', 'tomb2',
+                           'brazier', 'fence', 'signpost', 'firewood'], 'grid': [4, 4], 'out': 'props', 'sprite': True, 'max': 240}
+layout['bld1'] = {'ids': ['b_smith', 'b_bank', 'b_mage', 'b_store', 'b_healer', 'b_tailor'], 'grid': [3, 2], 'out': 'props', 'sprite': True, 'max': 512}
+layout['bld2'] = {'ids': ['b_miner', 'b_bowyer', 'b_alchemist', 'b_fisher', 'b_crypt', 'b_house'], 'grid': [3, 2], 'out': 'props', 'sprite': True, 'max': 512}
 (root / 'sheets' / 'layout.json').write_text(json.dumps(layout, indent=1), encoding='utf-8')
 print(len(items), 'icons in', len(sheets), 'sheets')

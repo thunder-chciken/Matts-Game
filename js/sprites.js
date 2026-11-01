@@ -94,6 +94,21 @@ const Sprites = {
     if (!im) { im = new Image(); im.src = 'assets/props/' + id + '.png'; this.propImgs[id] = im; }
     return im.complete && im.naturalWidth ? im : null;
   },
+  // Draw a painted prop with its base at (cx, cy). size = world height, or {w} for width-fitted props.
+  drawProp(ctx, id, cx, cy, size, flip, shadow = true) {
+    const im = this.propImg(id);
+    if (!im) return null;
+    let h, w;
+    if (typeof size === 'object') { w = size.w; h = im.naturalHeight * (w / im.naturalWidth); }
+    else { h = size; w = im.naturalWidth * (h / im.naturalHeight); }
+    if (shadow) {
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.beginPath(); ctx.ellipse(cx + w * 0.06, cy + 2, w * 0.42, Math.max(3, w * 0.15), 0, 0, 7); ctx.fill();
+    }
+    if (flip) { ctx.save(); ctx.translate(cx, 0); ctx.scale(-1, 1); ctx.drawImage(im, -w / 2, cy - h + 3, w, h); ctx.restore(); }
+    else ctx.drawImage(im, cx - w / 2, cy - h + 3, w, h);
+    return [w, h];
+  },
   // Pick a painted tree for a tile: [image, world height]
   paintedTree(kind, x, y) {
     const props = (typeof ART_MANIFEST !== 'undefined' && ART_MANIFEST.props) || [];
@@ -350,13 +365,20 @@ const Sprites = {
         ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(sx - 3, sy - 15, 6, 1.5); ctx.fillRect(sx - 0.75, sy - 18, 1.5, 7);
         break;
       case 'fence': {
-        ctx.fillStyle = '#7a5a30';
         const alongX = o && o.h === 'x';
         const dx = alongX ? 16 : -16, dy = 8;
-        ctx.fillRect(sx - dx - 1.5, sy - dy - 16, 3, 16);
-        ctx.fillRect(sx + dx - 1.5, sy + dy - 16, 3, 16);
-        ctx.strokeStyle = '#9a7240'; ctx.lineWidth = 2.5;
-        for (const hy of [-13, -7]) { ctx.beginPath(); ctx.moveTo(sx - dx, sy - dy + hy); ctx.lineTo(sx + dx, sy + dy + hy); ctx.stroke(); }
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.beginPath(); ctx.moveTo(sx - dx, sy - dy + 2); ctx.lineTo(sx + dx, sy + dy + 2); ctx.lineTo(sx + dx + 4, sy + dy + 4); ctx.lineTo(sx - dx + 4, sy - dy + 4); ctx.fill();
+        for (const px of [-1, 1]) {
+          const x0 = sx + dx * px, y0 = sy + dy * px;
+          ctx.fillStyle = '#3a2a1a'; ctx.fillRect(x0 - 2.2, y0 - 19, 4.4, 19);
+          ctx.fillStyle = '#5a4128'; ctx.fillRect(x0 - 2.2, y0 - 19, 2, 19);
+          ctx.fillStyle = '#2a1e12'; ctx.fillRect(x0 - 2.6, y0 - 20, 5.2, 2);
+        }
+        for (const hy of [-15, -8]) {
+          ctx.strokeStyle = '#2e2216'; ctx.lineWidth = 3.4; ctx.beginPath(); ctx.moveTo(sx - dx, sy - dy + hy); ctx.lineTo(sx + dx, sy + dy + hy); ctx.stroke();
+          ctx.strokeStyle = '#6a4e30'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(sx - dx, sy - dy + hy - 0.8); ctx.lineTo(sx + dx, sy + dy + hy - 0.8); ctx.stroke();
+        }
         break;
       }
       case 'brazier': {

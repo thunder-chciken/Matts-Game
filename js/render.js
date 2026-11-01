@@ -143,7 +143,12 @@ const Render = {
     if (alpha < 1) ctx.globalAlpha = alpha;
     switch (o.t) {
       case 'rock': this.drawRock(x, y); break;
-      case 'bldg': this.drawBuildingTile(World.buildings[o.b], x, y, night); break;
+      case 'bldg': {
+        const b = World.buildings[o.b], im = this.buildingArt(b);
+        if (!im) { this.drawBuildingTile(b, x, y, night); break; }
+        if (x === b.x1 && y === b.y1) this.drawPaintedBuilding(b, im, alpha);
+        break;
+      }
       case 'tree': {
         const depleted = World.nodes.get(x + ',' + y);
         if (depleted && depleted.left <= 0) ctx.globalAlpha *= 0.55;
@@ -167,25 +172,46 @@ const Render = {
       }
       case 'boulder': {
         const n = World.nodes.get(x + ',' + y), dep = n && n.left <= 0;
-        const s = Sprites.boulder(o.v, dep); ctx.drawImage(s.c, cx - s.ax, cy - s.ay);
-        this.pick(cx - 16, cy - 22, cx + 16, cy + 4, 'obj', o, x, y);
+        const flip = hash2(x, y, 82) < 0.5;
+        const id = dep ? 'slab' : ['boulder1', 'orerock1', 'orerock2'][o.v % 3];
+        const d = Sprites.drawProp(ctx, id, cx, cy, dep ? 16 : id === 'boulder1' ? 34 : 38, flip);
+        if (!d) { const s = Sprites.boulder(o.v, dep); ctx.drawImage(s.c, cx - s.ax, cy - s.ay); }
+        this.pick(cx - 18, cy - 30, cx + 18, cy + 4, 'obj', o, x, y);
         break;
       }
       case 'bush': {
         const n = World.nodes.get(x + ',' + y), dep = n && n.left <= 0;
-        const s = Sprites.bush(o.herb, o.v, dep); ctx.drawImage(s.c, cx - s.ax, cy - s.ay);
-        this.pick(cx - 13, cy - 22, cx + 13, cy + 4, 'obj', o, x, y);
+        const d = Sprites.drawProp(ctx, dep ? 'herb_bare' : 'herb_' + o.herb, cx, cy, dep ? 18 : 28, hash2(x, y, 83) < 0.5);
+        if (!d) { const s = Sprites.bush(o.herb, o.v, dep); ctx.drawImage(s.c, cx - s.ax, cy - s.ay); }
+        this.pick(cx - 15, cy - 26, cx + 15, cy + 4, 'obj', o, x, y);
         break;
       }
       case 'decor': {
+        const flip = hash2(x, y, 84) < 0.5;
+        const painted = { mushroom: ['mushrooms', 14], fern: ['ferns', 22], reeds: ['reeds', 32], bones: ['bones', 14], crate: ['crate', 22], barrel: ['barrel', 26], hay: ['hay', 22], brazier: ['brazier', 36] }[o.kind];
+        if (painted && Sprites.drawProp(ctx, painted[0], cx, cy, painted[1], flip)) {
+          if (o.kind === 'brazier') { const fl = Math.sin(time * 10) * 2; const g = ctx.createRadialGradient(cx, cy - 30, 1, cx, cy - 30, 10); g.addColorStop(0, 'rgba(200,250,255,0.6)'); g.addColorStop(1, 'rgba(80,180,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(cx, cy - 30 - fl, 7, 10 + fl, 0, 0, 7); ctx.fill(); }
+          break;
+        }
         if (o.kind === 'brazier') { Sprites.drawStation(ctx, 'brazier', cx, cy, time); break; }
         if (Terrain.ready && (o.kind === 'tuft' || o.kind === 'flowers' || o.kind === 'fern' || o.kind === 'shell')) break;
         const s = Sprites.decor(o.kind, o.v || 0); ctx.drawImage(s.c, cx - s.ax, cy - s.ay);
         break;
       }
-      default:
-        Sprites.drawStation(ctx, o.t, cx, cy, time, { night, h: o.h, v: o.v });
-        if (['forge', 'anvil', 'oven', 'board', 'shrine', 'well'].includes(o.t)) this.pick(cx - 16, cy - 40, cx + 16, cy + 4, 'obj', o, x, y);
+      default: {
+        const station = { forge: ['forge', 62], anvil: ['anvil', 26], oven: ['oven', 44], well: ['well', 60], lamp: ['lamp', 72], board: ['board', 46], shrine: ['shrine', 62], tomb: [o.v % 2 ? 'tomb2' : 'tomb1', 28] }[o.t];
+        let done = false;
+        if (station) done = !!Sprites.drawProp(ctx, station[0], cx, cy, station[1], o.t === 'tomb' && hash2(x, y, 85) < 0.5);
+        if (done && o.t === 'forge') { // live coals and smoke over the painted forge
+          const fl = 0.55 + Math.sin(time * 9) * 0.15 + Math.sin(time * 23) * 0.08;
+          const g = ctx.createRadialGradient(cx - 4, cy - 26, 1, cx - 4, cy - 26, 14);
+          g.addColorStop(0, `rgba(255,200,90,${fl})`); g.addColorStop(1, 'rgba(255,80,0,0)');
+          ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = g; ctx.fillRect(cx - 20, cy - 42, 32, 32); ctx.globalCompositeOperation = 'source-over';
+          for (let k = 0; k < 3; k++) { const p = (time * 0.6 + k / 3) % 1; ctx.fillStyle = `rgba(110,110,110,${0.3 * (1 - p)})`; ctx.beginPath(); ctx.arc(cx + 10 + Math.sin(time + k) * 3, cy - 62 - p * 26, 3 + p * 6, 0, 7); ctx.fill(); }
+        }
+        if (!done) Sprites.drawStation(ctx, o.t, cx, cy, time, { night, h: o.h, v: o.v });
+        if (['forge', 'anvil', 'oven', 'board', 'shrine', 'well'].includes(o.t)) this.pick(cx - 18, cy - 50, cx + 18, cy + 4, 'obj', o, x, y);
+      }
     }
     ctx.globalAlpha = 1;
   },
@@ -219,6 +245,38 @@ const Render = {
       }
       const top = Math.min(ny - hN, ey - hE, qy - hW);
       this.pick(qx, top, ex, sy, 'obj', World.objAt(x, y), x, y);
+    }
+  },
+  // Painted building sprite for a building, if its art is present
+  buildingArt(b) {
+    const id = { blacksmith: 'b_smith', banker: 'b_bank', mage: 'b_mage', provisioner: 'b_store', healer: 'b_healer', tailor: 'b_tailor',
+      miner: 'b_miner', bowyer: 'b_bowyer', alchemist: 'b_alchemist', fisher: 'b_fisher' }[b.role] || (b.wall === 'crypt' ? 'b_crypt' : 'b_house');
+    return Sprites.propImg(id);
+  },
+  drawPaintedBuilding(b, im, alpha) {
+    const ctx = this.ctx, P = Game.player;
+    const w = b.x1 - b.x0 + 1, d = b.y1 - b.y0 + 1;
+    const [fx, fy] = this.proj(b.x1 + 1, b.y1 + 1); // front (lowest) corner of the footprint
+    const sw = (w + d) * 32 * 1.1, sh = im.naturalHeight * (sw / im.naturalWidth);
+    const left = fx - sw / 2, top = fy - sh + 6;
+    // see-through when the hero is behind it
+    const [vx, vy] = this.visPos(P), [px, py] = this.feet(vx, vy);
+    const behind = (P.x < b.x0 || P.y < b.y0) && px > left + 10 && px < left + sw - 10 && py > top && py < fy;
+    ctx.save();
+    ctx.globalAlpha = behind ? 0.42 : 1;
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    const [lx, ly] = this.proj(b.x0, b.y1 + 1), [rx, ry] = this.proj(b.x1 + 1, b.y0);
+    ctx.beginPath(); ctx.moveTo(lx + 6, ly + 3); ctx.lineTo(fx + 6, fy + 3); ctx.lineTo(rx + 10, ry + 3); ctx.lineTo(rx + 14, ry - 2); ctx.lineTo(fx + 10, fy - 2); ctx.closePath(); ctx.fill();
+    if (b.door.side === 'x') { ctx.translate(fx, 0); ctx.scale(-1, 1); ctx.drawImage(im, -sw / 2, top, sw, sh); }
+    else ctx.drawImage(im, left, top, sw, sh);
+    ctx.restore();
+    // anyone standing in front of its side walls is drawn again on top
+    for (const e of Game.ents) {
+      if (e.hidden || e._fx == null) continue;
+      const ahead = e.x > b.x1 || e.y > b.y1;
+      if (!ahead || e.x + e.y >= b.x1 + b.y1) continue;
+      const [ex, ey] = this.feet(...this.visPos(e));
+      if (ex > left && ex < left + sw && ey > top && ey < fy + 40) this.drawEntity(e, Game.time);
     }
   },
   roofH(b, cx, cy) {

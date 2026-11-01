@@ -304,5 +304,93 @@
   "out": "props",
   "sprite": true,
   "max": 340
+ },
+ "wild1": {
+  "ids": [
+   "boulder1",
+   "orerock1",
+   "orerock2",
+   "slab",
+   "herb_sunleaf",
+   "herb_moonpetal",
+   "herb_frostcap",
+   "herb_emberroot",
+   "herb_ghostbloom",
+   "herb_bare",
+   "mushrooms",
+   "ferns",
+   "reeds",
+   "bones",
+   "stump",
+   "log"
+  ],
+  "grid": [
+   4,
+   4
+  ],
+  "out": "props",
+  "sprite": true,
+  "max": 220
+ },
+ "town1": {
+  "ids": [
+   "forge",
+   "anvil",
+   "well",
+   "lamp",
+   "board",
+   "shrine",
+   "oven",
+   "crate",
+   "barrel",
+   "hay",
+   "tomb1",
+   "tomb2",
+   "brazier",
+   "fence",
+   "signpost",
+   "firewood"
+  ],
+  "grid": [
+   4,
+   4
+  ],
+  "out": "props",
+  "sprite": true,
+  "max": 240
+ },
+ "bld1": {
+  "ids": [
+   "b_smith",
+   "b_bank",
+   "b_mage",
+   "b_store",
+   "b_healer",
+   "b_tailor"
+  ],
+  "grid": [
+   3,
+   2
+  ],
+  "out": "props",
+  "sprite": true,
+  "max": 512
+ },
+ "bld2": {
+  "ids": [
+   "b_miner",
+   "b_bowyer",
+   "b_alchemist",
+   "b_fisher",
+   "b_crypt",
+   "b_house"
+  ],
+  "grid": [
+   3,
+   2
+  ],
+  "out": "props",
+  "sprite": true,
+  "max": 512
  }
 }

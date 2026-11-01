@@ -256,10 +256,10 @@ const World = {
     for (let y = -4; y <= 4; y++) for (let x = -4; x <= 4; x++) this.ground[this.idx(cx + x, cy + y)] = G.COBBLE;
     // buildings in six slots, doors face the streets
     const slots = [
-      { x0: -14, y0: -8, x1: -9, y1: -4, side: 'y', at: -11, nx: -11, ny: -3 },
+      { x0: -13, y0: -8, x1: -9, y1: -4, side: 'y', at: -11, nx: -11, ny: -3 },
       { x0: -8, y0: -17, x1: -4, y1: -13, side: 'x', at: -15, nx: -3, ny: -15 },
-      { x0: 4, y0: -8, x1: 9, y1: -4, side: 'y', at: 6, nx: 6, ny: -3 },
-      { x0: 12, y0: -8, x1: 17, y1: -4, side: 'y', at: 14, nx: 14, ny: -3 },
+      { x0: 5, y0: -8, x1: 9, y1: -4, side: 'y', at: 7, nx: 7, ny: -3 },
+      { x0: 13, y0: -8, x1: 17, y1: -4, side: 'y', at: 15, nx: 15, ny: -3 },
       { x0: -8, y0: 4, x1: -4, y1: 8, side: 'x', at: 6, nx: -3, ny: 6 },
       { x0: -8, y0: 12, x1: -4, y1: 16, side: 'x', at: 14, nx: -3, ny: 14 },
     ];
