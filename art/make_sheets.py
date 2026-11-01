@@ -52,5 +52,12 @@ layout['town1'] = {'ids': ['forge', 'anvil', 'well', 'lamp', 'board', 'shrine', 
                            'brazier', 'fence', 'signpost', 'firewood'], 'grid': [4, 4], 'out': 'props', 'sprite': True, 'max': 240}
 layout['bld1'] = {'ids': ['b_smith', 'b_bank', 'b_mage', 'b_store', 'b_healer', 'b_tailor'], 'grid': [3, 2], 'out': 'props', 'sprite': True, 'max': 512}
 layout['bld2'] = {'ids': ['b_miner', 'b_bowyer', 'b_alchemist', 'b_fisher', 'b_crypt', 'b_house'], 'grid': [3, 2], 'out': 'props', 'sprite': True, 'max': 512}
+# in-world characters and creatures (face lower-right; mirrored in game)
+layout['mobs1'] = {'ids': ['m_rabbit', 'm_deer', 'm_horse', 'm_rat', 'm_crab', 'm_wolf', 'm_bear', 'm_slime', 'm_spider', 'm_bandit',
+                           'm_zombie', 'm_skeleton'], 'grid': [4, 3], 'out': 'sprites', 'sprite': True, 'max': 300}
+layout['mobs2'] = {'ids': ['m_direwolf', 'm_grizzly', 'm_tusker', 'm_captain', 'm_bonemage', 'm_wraith', 'm_ogre', 'm_troll', 'm_drake',
+                           'm_hollowking', 'm_cindermaw', ''], 'grid': [4, 3], 'out': 'sprites', 'sprite': True, 'max': 360}
+layout['heroes'] = {'ids': ['h_m_shirt', 'h_m_leather', 'h_m_chain', 'h_m_plate', 'h_m_robe', 'h_f_shirt', 'h_f_leather', 'h_f_chain',
+                            'h_f_plate', 'h_f_robe', 'h_townsman', 'h_townswoman'], 'grid': [4, 3], 'out': 'sprites', 'sprite': True, 'max': 320}
 (root / 'sheets' / 'layout.json').write_text(json.dumps(layout, indent=1), encoding='utf-8')
 print(len(items), 'icons in', len(sheets), 'sheets')

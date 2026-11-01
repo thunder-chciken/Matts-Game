@@ -280,7 +280,7 @@ def main():
         print(f'{sheet}: {len(ids)} icons')
     man = ROOT / 'assets' / 'manifest.js'
     text = man.read_text()
-    for kind in ('icons', 'portraits', 'monsters', 'terrain', 'props'):
+    for kind in ('icons', 'portraits', 'monsters', 'terrain', 'props', 'sprites'):
         files = sorted(p.stem for p in (ROOT / 'assets' / kind).glob('*.png'))
         text = re.sub(kind + r': \[[^\]]*\]', kind + ': [' + ', '.join(f"'{i}'" for i in files) + ']', text)
         print(f'manifest: {len(files)} {kind} registered')

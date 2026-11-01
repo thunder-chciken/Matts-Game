@@ -392,5 +392,74 @@
   "out": "props",
   "sprite": true,
   "max": 512
+ },
+ "mobs1": {
+  "ids": [
+   "m_rabbit",
+   "m_deer",
+   "m_horse",
+   "m_rat",
+   "m_crab",
+   "m_wolf",
+   "m_bear",
+   "m_slime",
+   "m_spider",
+   "m_bandit",
+   "m_zombie",
+   "m_skeleton"
+  ],
+  "grid": [
+   4,
+   3
+  ],
+  "out": "sprites",
+  "sprite": true,
+  "max": 300
+ },
+ "mobs2": {
+  "ids": [
+   "m_direwolf",
+   "m_grizzly",
+   "m_tusker",
+   "m_captain",
+   "m_bonemage",
+   "m_wraith",
+   "m_ogre",
+   "m_troll",
+   "m_drake",
+   "m_hollowking",
+   "m_cindermaw",
+   ""
+  ],
+  "grid": [
+   4,
+   3
+  ],
+  "out": "sprites",
+  "sprite": true,
+  "max": 360
+ },
+ "heroes": {
+  "ids": [
+   "h_m_shirt",
+   "h_m_leather",
+   "h_m_chain",
+   "h_m_plate",
+   "h_m_robe",
+   "h_f_shirt",
+   "h_f_leather",
+   "h_f_chain",
+   "h_f_plate",
+   "h_f_robe",
+   "h_townsman",
+   "h_townswoman"
+  ],
+  "grid": [
+   4,
+   3
+  ],
+  "out": "sprites",
+  "sprite": true,
+  "max": 320
  }
 }

@@ -3,7 +3,10 @@
 //  Isometric renderer
 //  World pixel space: tile (x,y) top vertex at ((x-y)*32, (x+y)*16)
 // =====================================================================
-const WALL_COLORS = { timber: '#bfae8e', stone: '#7c776e', wood: '#7a5a38', crypt: '#3e3a4c' };
+// World height (px) of each painted creature sprite
+const MON_SPRITE_H = { rabbit: 18, deer: 52, horse: 62, rat: 22, crab: 22, wolf: 36, bear: 46, slime: 28, spider: 32, bandit: 60, zombie: 58, skeleton: 60,
+  direwolf: 46, grizzly: 66, tusker: 66, captain: 62, bonemage: 62, wraith: 64, ogre: 92, troll: 90, drake: 80, hollowking: 102, cindermaw: 150 };
+const WALL_COLORS ={ timber: '#bfae8e', stone: '#7c776e', wood: '#7a5a38', crypt: '#3e3a4c' };
 
 const Render = {
   zoom: 2.0, cam: { x: 0, y: 0 }, picks: [],
@@ -394,6 +397,86 @@ const Render = {
     }
     return o;
   },
+  // ---------- Painted characters & creatures ----------
+  // [image, world height] for an entity, or null to fall back to code-drawn
+  paintedSprite(e) {
+    let id, h;
+    if (e.kind === 'player' || e.kind === 'npc') {
+      const fem = e.look && e.look.female;
+      if (e.kind === 'npc' && !['mage', 'healer', 'banker'].includes(e.role)) id = fem ? 'h_townswoman' : 'h_townsman';
+      else {
+        const ch = e.eq && e.eq.chest ? BASES[e.eq.chest.base].look : 'shirt';
+        const kind = ch === 'robe' ? 'robe' : ch === 'leather' ? 'leather' : ch === 'chain' ? 'chain' : ch === 'plate' ? 'plate' : 'shirt';
+        id = (fem ? 'h_f_' : 'h_m_') + kind;
+      }
+      h = 60;
+    } else if (e.mon) { id = 'm_' + e.mon; h = MON_SPRITE_H[e.mon] || 50; }
+    if (!id) return null;
+    const im = Sprites.spriteImg(id);
+    // hero art faces lower-left natively; creature art faces lower-right
+    return im ? [im, h, !id.startsWith('h_')] : null;
+  },
+  drawPainted(e, [im, h, nativeRight], fx, fy, time, alpha) {
+    const ctx = this.ctx, w = im.naturalWidth * (h / im.naturalHeight);
+    const right = e.face.right, dir = right ? 1 : -1, mirror = right !== nativeRight;
+    const moving = e.mt < 1, ph = e.walkPh || 0, seed = (e.id % 13) * 0.7;
+    const def = e.def || {};
+    const floaty = e.mon === 'wraith' || e.mon === 'hollowking';
+    let ox = 0, oy = 0, sx = 1, sy = 1, rot = 0;
+    if (moving) { oy -= Math.abs(Math.sin(ph)) * 2.6; rot = Math.sin(ph) * 0.045; sy = 1 - Math.abs(Math.cos(ph)) * 0.025; }
+    else sy = 1 + Math.sin(time * 2.2 + seed) * 0.012;
+    if (floaty) oy -= 7 + Math.sin(time * 2 + seed) * 3;
+    if (e.atkAnim >= 0) { const k = Math.sin(Math.min(1, e.atkAnim) * Math.PI); ox += dir * k * 7; oy += k * 2; sx += k * 0.05; rot += dir * k * 0.08; }
+    // mount underneath the rider
+    let riderY = 0;
+    if (e.kind === 'player' && e.mount) {
+      const horse = Sprites.spriteImg('m_' + e.mount.mon);
+      if (horse) {
+        const hh = MON_SPRITE_H[e.mount.mon] || 60, hw = horse.naturalWidth * (hh / horse.naturalHeight);
+        ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(fx, fy, hw * 0.42, 7, 0, 0, 7); ctx.fill();
+        ctx.save(); ctx.globalAlpha = alpha; ctx.translate(fx, fy + oy * 0.5); if (!right) ctx.scale(-1, 1); // creature art faces right
+        ctx.drawImage(horse, -hw / 2, -hh, hw, hh); ctx.restore();
+        riderY = -hh * 0.42;
+      }
+    }
+    if (!riderY) { ctx.fillStyle = 'rgba(0,0,0,0.32)'; ctx.beginPath(); ctx.ellipse(fx, fy, Math.max(9, w * 0.36), Math.max(4, w * 0.13), 0, 0, 7); ctx.fill(); }
+    const hs = riderY ? 0.86 : 1;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(fx + ox, fy + oy + riderY);
+    ctx.rotate(rot);
+    ctx.scale(sx * hs, sy * hs);
+    const body = () => {
+      if (mirror) { ctx.save(); ctx.scale(-1, 1); ctx.drawImage(im, -w / 2, -h, w, h); ctx.restore(); }
+      else ctx.drawImage(im, -w / 2, -h, w, h);
+    };
+    ctx.scale(dir, 1); // from here on +x is the facing direction
+    // shield behind the body, on the far arm
+    if (e.eq && e.eq.off) this.drawHeld(e.eq.off, -w * 0.26, -h * 0.48, h * 0.42, -0.6, true);
+    ctx.scale(dir, 1); body(); ctx.scale(dir, 1);
+    if (e.flash > 0) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, e.flash * 5) * 0.55; ctx.scale(dir, 1); body(); ctx.scale(dir, 1); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = alpha; }
+    // weapon in the near hand: swings on attack, chops while gathering
+    const held = e.kind === 'player' && e.action && e.action.type === 'gather' ? Player.findTool(e.action.skill) : e.eq && e.eq.main;
+    if (held) {
+      let swing = -0.15;
+      if (e.atkAnim >= 0) { const a = e.atkAnim; swing = a < 0.35 ? U.lerp(-0.15, -1.3, a / 0.35) : U.lerp(-1.3, 1.0, Math.min(1, (a - 0.35) / 0.45)); }
+      else if (e.action && e.action.anim) swing = U.lerp(-1.2, 0.9, (Math.sin(time * 7) + 1) / 2);
+      else if (moving) swing += Math.sin(ph) * 0.12;
+      this.drawHeld(held, w * 0.2, -h * 0.42, h * 0.62, swing, false);
+    }
+    ctx.restore();
+    return fy + oy + riderY - h * hs - 4;
+  },
+  // Painted item icon held at a hand point (local space); handle sits at the icon's lower-left
+  drawHeld(it, hx, hy, size, ang, isShield) {
+    const ctx = this.ctx, im = Sprites.urlImg(Art.itemIcon(it));
+    if (!im) return;
+    ctx.save(); ctx.translate(hx, hy);
+    if (isShield) { ctx.drawImage(im, -size / 2, -size / 2, size, size); ctx.restore(); return; }
+    ctx.rotate(ang);
+    ctx.drawImage(im, -size * 0.2, -size * 0.8, size, size);
+    ctx.restore();
+  },
   drawEntity(e, time) {
     const ctx = this.ctx;
     const [vx, vy] = this.visPos(e);
@@ -404,6 +487,13 @@ const Render = {
     if (Game.target === e) { ctx.strokeStyle = e.hostileTo ? '#ff4a3a' : '#ffd94a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(fx, fy, 15, 6.5, 0, 0, 7); ctx.stroke(); }
     else if (Game.hoverPick && Game.hoverPick.ref === e) { ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(fx, fy, 14, 6, 0, 0, 7); ctx.stroke(); }
     let top = fy - 50;
+    const painted = this.paintedSprite(e);
+    if (painted) {
+      top = this.drawPainted(e, painted, fx, fy, time, alpha);
+      e._top = top; e._fx = fx; e._fy = fy;
+      if (e.kind !== 'decor') this.pick(fx - 16, top, fx + 16, fy + 4, 'ent', e);
+      return;
+    }
     if (e.kind === 'player' || e.look || (e.def && e.def.body === 'humanoid')) {
       const o = this.humanoidOpts(e, time);
       o.alpha = alpha;

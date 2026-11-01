@@ -94,6 +94,18 @@ const Sprites = {
     if (!im) { im = new Image(); im.src = 'assets/props/' + id + '.png'; this.propImgs[id] = im; }
     return im.complete && im.naturalWidth ? im : null;
   },
+  spriteImg(id) {
+    if (typeof ART_MANIFEST === 'undefined' || !ART_MANIFEST.sprites || !ART_MANIFEST.sprites.includes(id)) return null;
+    let im = this.propImgs['s:' + id];
+    if (!im) { im = new Image(); im.src = 'assets/sprites/' + id + '.png'; this.propImgs['s:' + id] = im; }
+    return im.complete && im.naturalWidth ? im : null;
+  },
+  // Image object for an icon URL (painted file or generated data URL), cached
+  urlImg(url) {
+    let im = this.propImgs['u:' + url];
+    if (!im) { im = new Image(); im.src = url; this.propImgs['u:' + url] = im; }
+    return im.complete && im.naturalWidth ? im : null;
+  },
   // Draw a painted prop with its base at (cx, cy). size = world height, or {w} for width-fitted props.
   drawProp(ctx, id, cx, cy, size, flip, shadow = true) {
     const im = this.propImg(id);
