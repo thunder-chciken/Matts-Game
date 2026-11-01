@@ -16,6 +16,11 @@ python serve.py
 
 Then open http://localhost:8642. Progress saves automatically in the browser (4 character slots).
 
+On Windows you can instead double-click `Play Hoardlands.vbs` (or a desktop shortcut to it, with
+`assets/hoardlands.ico` as its icon): it starts the server on port 8650 with no console window and
+opens http://localhost:8650. Saves belong to the browser and address, so a character made there is
+separate from one made on 8642.
+
 ## What's in the base game
 
 - **In-depth character creator.** Pick from 8 professions or build a custom one. Customize body, skin, 8 hair styles, hair color, facial hair and outfit colors with a live animated preview. Spend 100 attribute points on Str/Dex/Int and 150 skill points across up to 4 of 21 skills. Choose one of 7 birthsigns and one of 3 starting towns, then review before you start.
