@@ -47,7 +47,8 @@ const Render = {
     const W = World.W;
     this.picks.length = 0;
     // ---- ground ----
-    for (let s = sMin; s <= sMax; s++) {
+    if (Terrain.ready) Terrain.draw(ctx, sMin, sMax, dMin, dMax, time);
+    else for (let s = sMin; s <= sMax; s++) {
       for (let d = dMin; d <= dMax; d++) {
         if ((s + d) & 1) continue;
         const x = (s + d) >> 1, y = (s - d) >> 1;
@@ -59,7 +60,7 @@ const Render = {
         ctx.drawImage(img, d * 32 - 33, s * 16 - 1);
       }
     }
-    this.drawShores(sMin, sMax, dMin, dMax);
+    if (!Terrain.ready) this.drawShores(sMin, sMax, dMin, dMax);
     // hover tile
     if (Game.hoverTile && !Game.hoverPick) {
       const [hx, hy] = Game.hoverTile;
@@ -84,8 +85,8 @@ const Render = {
     const covers = (o, x, y) => {
       if (o.t !== 'tree' && o.t !== 'rock' && o.t !== 'bldg') return false;
       const [ox, oy] = this.proj(x, y), cy = oy + 16;
-      const h = o.t === 'tree' ? 95 : o.t === 'rock' ? World.rockH[y * W + x] + 10 : 60;
-      return Math.abs(ox - fx) < (o.t === 'tree' ? 26 : 36) && fy - 10 > cy - h && fy - 40 < cy + 16;
+      const h = o.t === 'tree' ? 140 : o.t === 'rock' ? World.rockH[y * W + x] + 10 : 60;
+      return Math.abs(ox - fx) < (o.t === 'tree' ? 58 : 36) && fy - 10 > cy - h && fy - 40 < cy + 16;
     };
     for (let s = sMin; s <= sMax + 12; s++) {
       const fl = flats.get(s);
@@ -144,11 +145,24 @@ const Render = {
       case 'rock': this.drawRock(x, y); break;
       case 'bldg': this.drawBuildingTile(World.buildings[o.b], x, y, night); break;
       case 'tree': {
-        const t = Sprites.tree(o.kind, o.v);
         const depleted = World.nodes.get(x + ',' + y);
         if (depleted && depleted.left <= 0) ctx.globalAlpha *= 0.55;
-        ctx.drawImage(t.c, cx - t.ax, cy - t.ay);
-        this.pick(cx - 22, cy - 90, cx + 22, cy, 'obj', o, x, y);
+        const pt = Sprites.paintedTree(o.kind, x, y);
+        if (pt) {
+          const [im, th] = pt, s = th / im.naturalHeight, tw = im.naturalWidth * s;
+          ctx.fillStyle = 'rgba(0,0,0,0.32)';
+          ctx.beginPath(); ctx.ellipse(cx + 8, cy + 4, tw * 0.36, tw * 0.13, 0, 0, 7); ctx.fill();
+          ctx.save(); ctx.translate(cx, cy + 6);
+          ctx.rotate(Math.sin(time * 0.8 + hash2(x, y, 80) * 6.28) * 0.012);
+          if (hash2(x, y, 81) < 0.5) ctx.scale(-1, 1);
+          ctx.drawImage(im, -tw / 2, -th, tw, th);
+          ctx.restore();
+          this.pick(cx - tw * 0.3, cy - th, cx + tw * 0.3, cy + 4, 'obj', o, x, y);
+        } else {
+          const t = Sprites.tree(o.kind, o.v);
+          ctx.drawImage(t.c, cx - t.ax, cy - t.ay);
+          this.pick(cx - 22, cy - 90, cx + 22, cy, 'obj', o, x, y);
+        }
         break;
       }
       case 'boulder': {
@@ -165,6 +179,7 @@ const Render = {
       }
       case 'decor': {
         if (o.kind === 'brazier') { Sprites.drawStation(ctx, 'brazier', cx, cy, time); break; }
+        if (Terrain.ready && (o.kind === 'tuft' || o.kind === 'flowers' || o.kind === 'fern' || o.kind === 'shell')) break;
         const s = Sprites.decor(o.kind, o.v || 0); ctx.drawImage(s.c, cx - s.ax, cy - s.ay);
         break;
       }
@@ -547,9 +562,9 @@ const Render = {
     if (!this.fog) this.initAtmosphere();
     ctx.setTransform(d, 0, 0, d, 0, 0);
     // colour grade: desaturate, warm the midtones, deepen the shadows
-    ctx.globalCompositeOperation = 'saturation'; ctx.fillStyle = 'rgba(128,128,128,0.32)'; ctx.fillRect(0, 0, W, H);
-    ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = 'rgba(160,100,50,0.4)'; ctx.fillRect(0, 0, W, H);
-    ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgb(200,196,192)'; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'saturation'; ctx.fillStyle = 'rgba(128,128,128,0.18)'; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = 'rgba(170,110,55,0.3)'; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgb(236,232,226)'; ctx.fillRect(0, 0, W, H);
     ctx.globalCompositeOperation = 'source-over';
     // drifting fog, thicker at night and in the swamp
     const swamp = World.biome(P.x, P.y) === 'swamp' ? 0.18 : 0;
@@ -562,7 +577,7 @@ const Render = {
     }
     ctx.globalAlpha = 1;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    this.drawLighting(0.3 + night * 0.62, time, night);
+    this.drawLighting(0.16 + night * 0.72, time, night);
     // motes & embers on top so they glow
     ctx.setTransform(d * this.zoom, 0, 0, d * this.zoom, d * (W / 2 - this.cam.x * this.zoom), d * (H / 2 - this.cam.y * this.zoom));
     this.updateMotes(time, night);
@@ -570,7 +585,7 @@ const Render = {
     // vignette
     ctx.setTransform(d, 0, 0, d, 0, 0);
     const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.32, W / 2, H / 2, Math.max(W, H) * 0.72);
-    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(4,3,2,${0.62 + night * 0.2})`);
+    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(4,3,2,${0.5 + night * 0.25})`);
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   },

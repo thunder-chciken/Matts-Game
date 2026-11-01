@@ -12,6 +12,7 @@ const Main = {
     this.loadSettings();
     Sprites.init();
     World.gen(WORLD_SEED);
+    Terrain.load();
     Render.init(document.getElementById('game'));
     UI.init();
     this.bindInput();

@@ -37,5 +37,13 @@ mons = ['rabbit', 'deer', 'horse', 'rat', 'crab', 'wolf', 'bear', 'slime', 'spid
         'direwolf', 'grizzly', 'tusker', 'captain', 'bonemage', 'wraith', 'ogre', 'troll', 'drake', 'hollowking', 'cindermaw']
 layout['monsters1'] = {'ids': mons[:12], 'grid': [4, 3], 'out': 'monsters', 'opaque': True}
 layout['monsters2'] = {'ids': mons[12:], 'grid': [4, 3], 'out': 'monsters', 'opaque': True}
+# painted ground textures (made seamless in-game)
+layout['terrain'] = {'ids': ['grass', 'grass2', 'forest', 'mud', 'flagstone', 'cobble', 'sand', 'swamp', 'rocky', 'planks',
+                             'grave', 'ash', 'water', 'deepwater', 'earth', 'meadow'], 'grid': [4, 4], 'out': 'terrain', 'opaque': True}
+# world sprites (Grok tree sheets), cut tight and anchored at the base
+layout['trees1'] = {'ids': ['oak1', 'oak2', 'pine1', 'pine2', 'pine3', 'pine4', 'birch1', 'birch2', 'autumn1', 'autumn2',
+                            'dead1', 'dead2', 'dead3', 'willow1', 'willow2', 'dead4'], 'grid': [4, 4], 'out': 'props', 'sprite': True, 'max': 340}
+layout['trees2'] = {'ids': ['oak3', 'pine5', 'birch3', 'autumn3', 'oak4', 'pine6', 'birch4', 'autumn4', 'dead5', 'dead6',
+                            'dead7', 'willow3', 'oak5', 'pine7', 'willow4', 'dead8'], 'grid': [4, 4], 'out': 'props', 'sprite': True, 'max': 340}
 (root / 'sheets' / 'layout.json').write_text(json.dumps(layout, indent=1), encoding='utf-8')
 print(len(items), 'icons in', len(sheets), 'sheets')

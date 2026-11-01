@@ -86,6 +86,36 @@ const Sprites = {
     return c;
   },
 
+  // ---------- Painted world sprites (assets/props) ----------
+  propImgs: {},
+  propImg(id) {
+    if (typeof ART_MANIFEST === 'undefined' || !ART_MANIFEST.props || !ART_MANIFEST.props.includes(id)) return null;
+    let im = this.propImgs[id];
+    if (!im) { im = new Image(); im.src = 'assets/props/' + id + '.png'; this.propImgs[id] = im; }
+    return im.complete && im.naturalWidth ? im : null;
+  },
+  // Pick a painted tree for a tile: [image, world height]
+  paintedTree(kind, x, y) {
+    const props = (typeof ART_MANIFEST !== 'undefined' && ART_MANIFEST.props) || [];
+    if (!props.length) return null;
+    const h = hash2(x, y, 77), h2 = hash2(x, y, 78);
+    const of = (p) => props.filter((id) => id.startsWith(p));
+    let list, height;
+    if (kind === 'pine') { list = of('pine'); height = 135; }
+    else if (kind === 'dead') {
+      const swamp = World.groundAt(x, y) === G.SWAMP;
+      list = swamp && h2 < 0.5 ? of('willow') : of('dead');
+      height = list[0] && list[0].startsWith('willow') ? 115 : 105;
+    } else {
+      const r = h2;
+      list = r < 0.62 ? of('oak') : r < 0.86 ? of('birch') : of('autumn');
+      height = r < 0.62 ? 120 : r < 0.86 ? 125 : 115;
+    }
+    if (!list.length) return null;
+    const im = this.propImg(list[Math.floor(h * list.length)]);
+    return im ? [im, height * (0.82 + hash2(x, y, 79) * 0.32)] : null;
+  },
+
   // ---------- Trees ----------
   tree(kind, v) {
     const key = 'tree:' + kind + v;

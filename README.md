@@ -9,8 +9,10 @@ Everything runs in the browser with plain JavaScript and Canvas. There is no bui
 Browsers block scripts on `file://` pages in some setups, so serve the folder locally:
 
 ```bash
-python -m http.server 8642
+python serve.py
 ```
+
+`serve.py` is a tiny local server with caching turned off, so new code and art always load on refresh.
 
 Then open http://localhost:8642. Progress saves automatically in the browser (4 character slots).
 

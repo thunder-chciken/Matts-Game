@@ -131,6 +131,111 @@ def resample(w, h, px, sx, sy, side, size=SIZE):
     return out
 
 
+def resample_rect(w, h, px, sx, sy, sw, sh, ow, oh):
+    """Area-average (premultiplied) a rectangle to ow x oh."""
+    out = bytearray(ow * oh * 4)
+    fx, fy = sw / ow, sh / oh
+    for oy in range(oh):
+        ya = int(sy + oy * fy); yb = max(int(sy + (oy + 1) * fy), ya + 1)
+        for ox in range(ow):
+            xa = int(sx + ox * fx); xb = max(int(sx + (ox + 1) * fx), xa + 1)
+            r = g = b = a = n = 0
+            for y in range(ya, yb):
+                if y < 0 or y >= h: n += xb - xa; continue
+                base = y * w
+                for x in range(xa, xb):
+                    n += 1
+                    if x < 0 or x >= w: continue
+                    i = (base + x) * 4; al = px[i + 3]
+                    if al:
+                        r += px[i] * al; g += px[i + 1] * al; b += px[i + 2] * al; a += al
+            o = (oy * ow + ox) * 4
+            if a:
+                out[o] = r // a; out[o + 1] = g // a; out[o + 2] = b // a; out[o + 3] = a // n
+    return out
+
+
+def key_generic(w, h, px):
+    """Key out any flat background colour (sampled from the borders) and suppress its colour spill."""
+    samples = []
+    for t in range(1, 20):
+        for (x, y) in [(t * w // 20, 3), (t * w // 20, h - 4), (3, t * h // 20), (w - 4, t * h // 20)]:
+            i = (y * w + x) * 4; samples.append(px[i:i + 3])
+    bg = [sorted(s[c] for s in samples)[len(samples) // 2] for c in range(3)]
+    d0, d1 = 55, 150
+    for i in range(0, len(px), 4):
+        r, g, b = px[i], px[i + 1], px[i + 2]
+        d = abs(r - bg[0]) + abs(g - bg[1]) + abs(b - bg[2])
+        if d <= d0:
+            px[i + 3] = 0; continue
+        a = 1.0 if d >= d1 else (d - d0) / (d1 - d0)
+        if a < 1:
+            k = 1 - a
+            r = (r - k * bg[0]) / a; g = (g - k * bg[1]) / a; b = (b - k * bg[2]) / a
+        # pink/magenta spill: red and blue both above green
+        m = min(r, b)
+        if m > g + 6:
+            r -= (m - g) * 0.85; b -= (m - g) * 0.85
+        if a < 0.98:  # edge pixels: pull leftover background red/pink toward neutral
+            r = min(r, (g + b) / 2 + 22)
+        px[i] = max(0, min(255, int(r))); px[i + 1] = max(0, min(255, int(g))); px[i + 2] = max(0, min(255, int(b)))
+        px[i + 3] = int(a * 255)
+    return bg
+
+
+def drop_specks(w, px, x0, y0, x1, y1, keep=0.02):
+    """Remove small disconnected blobs inside a cell (keeps components >= keep * largest)."""
+    cw, ch = x1 - x0, y1 - y0
+    lab = [0] * (cw * ch); sizes = [0]; cur = 0
+    for sy in range(ch):
+        for sx in range(cw):
+            if lab[sy * cw + sx] or px[((y0 + sy) * w + x0 + sx) * 4 + 3] <= 40:
+                continue
+            cur += 1; sizes.append(0); stack = [(sx, sy)]; lab[sy * cw + sx] = cur
+            while stack:
+                cx, cy = stack.pop(); sizes[cur] += 1
+                for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+                    if 0 <= nx < cw and 0 <= ny < ch and not lab[ny * cw + nx] and px[((y0 + ny) * w + x0 + nx) * 4 + 3] > 40:
+                        lab[ny * cw + nx] = cur; stack.append((nx, ny))
+    if cur == 0:
+        return
+    big = max(sizes)
+    for sy in range(ch):
+        for sx in range(cw):
+            l = lab[sy * cw + sx]
+            i = ((y0 + sy) * w + x0 + sx) * 4
+            if (l and sizes[l] < big * keep) or (not l and px[i + 3] <= 40):
+                px[i + 3] = 0
+
+
+def slice_sprites(w, h, px, spec):
+    """World sprites: key the background, crop each cell tight (keeping aspect), fit within max px."""
+    key_generic(w, h, px)
+    cols, rows = spec['grid']
+    dest = ROOT / 'assets' / spec['out']; dest.mkdir(parents=True, exist_ok=True)
+    cw, ch = w / cols, h / rows
+    mx = spec.get('max', 320)
+    for k, iid in enumerate(spec['ids']):
+        if not iid:
+            continue
+        cx, cy = k % cols, k // cols
+        x0, y0, x1, y1 = int(cx * cw) + 3, int(cy * ch) + 3, int((cx + 1) * cw) - 3, int((cy + 1) * ch) - 3
+        drop_specks(w, px, x0, y0, x1, y1)
+        bx0, by0, bx1, by1 = x1, y1, x0, y0
+        for y in range(y0, y1):
+            row = y * w * 4
+            for x in range(x0, x1):
+                if px[row + x * 4 + 3] > 60:
+                    bx0 = min(bx0, x); bx1 = max(bx1, x); by0 = min(by0, y); by1 = max(by1, y)
+        if bx1 < bx0:
+            print(f'  {iid}: empty'); continue
+        sw, sh = bx1 - bx0 + 1, by1 - by0 + 1
+        s = min(1.0, mx / max(sw, sh))
+        ow, oh = max(1, round(sw * s)), max(1, round(sh * s))
+        write_png(dest / f'{iid}.png', ow, oh, resample_rect(w, h, px, bx0, by0, sw, sh, ow, oh))
+    print(f'sprites -> {spec["out"]}: {len([i for i in spec["ids"] if i])}')
+
+
 def main():
     layout = json.loads((SHEETS / 'layout.json').read_text())
     OUT.mkdir(parents=True, exist_ok=True)
@@ -143,6 +248,9 @@ def main():
             print(f'skip {sheet}: no {src.name}')
             continue
         w, h, px = read_png(src)
+        if isinstance(spec, dict) and spec.get('sprite'):
+            slice_sprites(w, h, px, spec)
+            continue
         if isinstance(spec, dict):  # opaque portrait grid: cut cells as-is
             cols, rows = spec['grid']
             dest = ROOT / 'assets' / spec['out']; dest.mkdir(parents=True, exist_ok=True)
@@ -172,7 +280,7 @@ def main():
         print(f'{sheet}: {len(ids)} icons')
     man = ROOT / 'assets' / 'manifest.js'
     text = man.read_text()
-    for kind in ('icons', 'portraits', 'monsters'):
+    for kind in ('icons', 'portraits', 'monsters', 'terrain', 'props'):
         files = sorted(p.stem for p in (ROOT / 'assets' / kind).glob('*.png'))
         text = re.sub(kind + r': \[[^\]]*\]', kind + ': [' + ', '.join(f"'{i}'" for i in files) + ']', text)
         print(f'manifest: {len(files)} {kind} registered')
