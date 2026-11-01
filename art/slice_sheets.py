@@ -147,12 +147,15 @@ def main():
             cols, rows = spec['grid']
             dest = ROOT / 'assets' / spec['out']; dest.mkdir(parents=True, exist_ok=True)
             cw, ch = w // cols, h // rows
+            # generated grids are not perfectly even: trim each cell so neighbors never bleed in
+            ix, iy = round(cw * 0.03), round(ch * 0.045)
+            ow, oh = cw - 2 * ix, ch - 2 * iy
             for k, iid in enumerate(spec['ids']):
-                cx, cy = (k % cols) * cw, (k // cols) * ch
+                cx, cy = (k % cols) * cw + ix, (k // cols) * ch + iy
                 cell = bytearray()
-                for y in range(cy, cy + ch):
-                    cell += px[(y * w + cx) * 4:(y * w + cx + cw) * 4]
-                write_png(dest / f'{iid}.png', cw, ch, cell)
+                for y in range(cy, cy + oh):
+                    cell += px[(y * w + cx) * 4:(y * w + cx + ow) * 4]
+                write_png(dest / f'{iid}.png', ow, oh, cell)
             print(f'{sheet}: {len(spec["ids"])} images')
             continue
         ids = spec
