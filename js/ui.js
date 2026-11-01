@@ -10,6 +10,14 @@ const Art = {
     if (this.has('icons', id)) return 'assets/icons/' + id + '.png';
     return Sprites.iconURL(b.icon, Items.color(it));
   },
+  // Painted icons show the plain material; tint them for other metals/woods/hides/cloths and dyes
+  itemTint(it) {
+    const b = BASES[it.base];
+    if (it.art || !this.has('icons', it.base)) return null;
+    if (it.dye) return it.dye;
+    if (b.mat && it.mat && it.mat !== MATS[b.mat][0].id) return getMat(b.mat, it.mat).color;
+    return null;
+  },
   baseIcon(baseId) {
     if (this.has('icons', baseId)) return 'assets/icons/' + baseId + '.png';
     const b = BASES[baseId];
@@ -113,7 +121,9 @@ const UI = {
     const q = it.qty > 1 ? `<span class="qty">${it.qty > 9999 ? Math.floor(it.qty / 1000) + 'k' : it.qty}</span>` : '';
     const ex = it.q ? '<span class="exc">★</span>' : '';
     const lk = it.lock ? '<span class="lock">🔒</span>' : '';
-    return `<div class="slot r${r}" data-uid="${it.uid}" data-src="${src}" ${extra}><img src="${Art.itemIcon(it)}" draggable="false">${q}${ex}${lk}</div>`;
+    const icon = Art.itemIcon(it), tint = Art.itemTint(it);
+    const tintEl = tint ? `<i class="tint" style="--t:${tint};-webkit-mask-image:url(${icon});mask-image:url(${icon})"></i>` : '';
+    return `<div class="slot r${r}" data-uid="${it.uid}" data-src="${src}" ${extra}><img src="${icon}" draggable="false">${tintEl}${q}${ex}${lk}</div>`;
   },
   findItem(uid, src) {
     const P = Game.player;

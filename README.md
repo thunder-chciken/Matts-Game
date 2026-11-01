@@ -35,7 +35,15 @@ Left-click to walk or interact (hold to keep walking). Use WASD or arrows to mov
 
 ## Adding generated art
 
-`art/PROMPTS.md` has a consistent prompt pack for ChatGPT or Grok (item icons, artifacts, profession portraits and monster portraits). Save each image as `assets/icons/<itemId>.png` (or `assets/portraits/`, `assets/monsters/`), add its id to `assets/manifest.js`, and reload. Anything not listed falls back to the built-in drawings.
+All 145 item icons (including the 13 artifacts) and the 8 profession portraits are painted art generated with ChatGPT. Gear icons are drawn in plain iron, pine, leather or linen, and the game tints them for other materials and dyes.
+
+To add or redo art:
+
+1. `art/PROMPTS.md` holds the prompt pack. `python -I art/make_sheets.py` turns it into 4×4 sheet prompts (`art/sheets/sheetNN.txt`) plus `layout.json`.
+2. Generate each sheet on a flat magenta background and save it as `art/sheets/sheetNN.png` (portraits: `art/sheets/portraits.png`, a 4×2 grid).
+3. `python -I art/slice_sheets.py` keys out the magenta, crops each cell to a 128px icon in `assets/icons/`, cuts the portraits into `assets/portraits/`, and updates `assets/manifest.js`. It uses only the Python standard library.
+
+Anything not listed in the manifest falls back to the built-in drawings.
 
 ## Code layout
 
