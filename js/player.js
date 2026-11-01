@@ -763,6 +763,29 @@ const Player = {
   },
   displayTitle() { const P = this.P; return P.title || this.bestTitle(); },
 
+  // ---------- Bestiary hunting ranks ----------
+  huntRank(mon) {
+    const k = this.P.kills[mon] || 0;
+    let r = -1;
+    HUNT_RANKS.forEach((h, i) => { if (k >= h.kills) r = i; });
+    return r;
+  },
+  huntBonus(mon) { const r = this.huntRank(mon); return r >= 0 ? HUNT_RANKS[r].bonus : 0; },
+  baneTitle(mon) { return `${MONSTERS[mon].name.replace(/^The /, '')}bane`; },
+  onKillRank(mon) {
+    const P = this.P, k = P.kills[mon], def = MONSTERS[mon];
+    const rank = HUNT_RANKS.findIndex((h) => h.kills === k);
+    if (rank < 0) return;
+    const h = HUNT_RANKS[rank];
+    if (rank === 0) UI.log(`Bestiary: ${def.name} discovered!`, '#7fe0ff');
+    else {
+      UI.toast(`${def.name}: ${h.name}`, h.color, h.desc);
+      Sound.play('rare', rank + 1);
+    }
+    if (h.name === 'Bane') { const t = this.baneTitle(mon); if (!P.titles.includes(t)) P.titles.push(t); }
+    UI.dirty('bestiary');
+  },
+
   // ---------- Bounties & daily ----------
   ensureBounties() {
     const P = this.P, day = U.dayKey();

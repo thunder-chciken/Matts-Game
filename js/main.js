@@ -169,6 +169,7 @@ const Main = {
         case 'i': UI.toggle('inv'); break;
         case 'k': UI.toggle('skills'); break;
         case 'j': UI.toggle('codex'); break;
+        case 'l': UI.toggle('bestiary'); break;
         case 'b': UI.toggle('bounty'); break;
         case 'p': UI.toggle('pets'); break;
         case 'u': UI.toggle('craft'); break;

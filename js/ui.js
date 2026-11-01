@@ -24,6 +24,21 @@ const Art = {
     return Sprites.iconURL(b.icon, b.mat ? MATS[b.mat][0].color : b.color);
   },
   portrait(prof) { return this.has('portraits', prof) ? 'assets/portraits/' + prof + '.png' : null; },
+  // Bestiary portrait: painted art if present, otherwise the in-game sprite on a vignette
+  monster(mon) {
+    if (this.has('monsters', mon)) return 'assets/monsters/' + mon + '.png';
+    const key = 'mon|' + mon;
+    if (Sprites.iconCache.has(key)) return Sprites.iconCache.get(key);
+    const c = mkCanvas(160, 160), x = c.getContext('2d'), def = MONSTERS[mon];
+    const g = x.createRadialGradient(80, 90, 10, 80, 90, 100); g.addColorStop(0, '#3a2e20'); g.addColorStop(1, '#120e0a');
+    x.fillStyle = g; x.fillRect(0, 0, 160, 160);
+    const o = { right: true, front: true, time: 0, scale: 2, moving: false, atk: -1 };
+    if (def.body === 'humanoid') Sprites.humanoid(x, 80, 140, Object.assign(Render.humanoidOpts({ def, face: o, mt: 1 }, 0), { scale: 2.2, atk: -1, float: false }));
+    else Sprites[def.body](x, 80, 135, def.look, Object.assign(o, { scale: def.boss ? 1.6 : 2 }));
+    const u = c.toDataURL();
+    Sprites.iconCache.set(key, u);
+    return u;
+  },
 };
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -110,7 +125,7 @@ const UI = {
     if (this.isOpen(id)) { this.close(id); return; }
     Sound.play('click');
     ({ char: () => this.openChar(), inv: () => this.openInv(), skills: () => this.openSkills(), codex: () => this.openCodex(),
-      bounty: () => this.openBounties(), pets: () => this.openPets(), craft: () => this.openCraft(), map: () => this.openMap(), help: () => this.openHelp(), settings: () => this.openSettings() })[id]();
+      bounty: () => this.openBounties(), bestiary: () => this.openBestiary(), pets: () => this.openPets(), craft: () => this.openCraft(), map: () => this.openMap(), help: () => this.openHelp(), settings: () => this.openSettings() })[id]();
   },
   body(id) { return this.wins[id].querySelector('.win-body'); },
 
@@ -242,6 +257,7 @@ const UI = {
     switch (a) {
       case 'lock': { const s = P.skills[d.id]; s.lock = s.lock === 'up' ? 'down' : s.lock === 'down' ? 'lock' : 'up'; this.dirty('skills'); break; }
       case 'codexcat': this.codexCat = d.cat; this.dirty('codex'); break;
+      case 'beastsel': this.beastSel = d.mon; this.dirty('bestiary'); break;
       case 'sortinv': {
         const order = { weapon: 0, armor: 1, shield: 2, jewelry: 3, tool: 4, consumable: 5, resource: 6, trophy: 7 };
         P.inv.sort((a, b) => (order[BASES[a.base].cat] - order[BASES[b.base].cat]) || ((b.r || 0) - (a.r || 0)) || Items.name(a).localeCompare(Items.name(b)));
@@ -342,7 +358,8 @@ const UI = {
     if (t && !t.dead) {
       tf.style.display = 'block';
       const tier = t.def ? ['Harmless', 'Weak', 'Dangerous', 'Deadly', 'BOSS'][t.def.tier] : '';
-      tf.innerHTML = `<div class="tf-name">${U.esc(t.name)} <span class="tf-tier t${t.def ? t.def.tier : 0}">${t.kind === 'pet' ? 'Your pet' : tier}</span></div><div class="tf-bar"><div style="width:${U.clamp(t.hp / t.maxHp * 100, 0, 100)}%"></div><span>${Math.ceil(t.hp)} / ${t.maxHp}</span></div>`;
+      const pic = t.mon && Art.has('monsters', t.mon) ? `<img class="tf-pic" src="${Art.monster(t.mon)}">` : '';
+      tf.innerHTML = `${pic}<div class="tf-name">${U.esc(t.name)} <span class="tf-tier t${t.def ? t.def.tier : 0}">${t.kind === 'pet' ? 'Your pet' : tier}</span></div><div class="tf-bar"><div style="width:${U.clamp(t.hp / t.maxHp * 100, 0, 100)}%"></div><span>${Math.ceil(t.hp)} / ${t.maxHp}</span></div>`;
     } else tf.style.display = 'none';
     // buffs
     const bh = P.buffs.map((b) => `<div class="buff" style="--c:${b.color || '#9ad8ff'}" data-tip="${U.esc('<div class=tt-name>' + b.name + '</div><div class=tt-use>' + Math.ceil(b.t / 60) + ' min left</div>')}">${b.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}<span>${Math.ceil(b.t / 60)}m</span></div>`).join('');
@@ -397,7 +414,7 @@ const UI = {
     this.refT = (this.refT || 0) - dt;
     if (this.refT <= 0) {
       this.refT = 0.12;
-      const map = { inv: 'renderInv', char: 'renderChar', skills: 'renderSkills', codex: 'renderCodex', bounty: 'renderBounties', pets: 'renderPets', craft: 'renderCraft', vendor: 'renderVendor', bank: 'renderBank', loot: 'renderLoot', settings: 'renderSettings' };
+      const map = { inv: 'renderInv', char: 'renderChar', skills: 'renderSkills', codex: 'renderCodex', bestiary: 'renderBestiary', bounty: 'renderBounties', pets: 'renderPets', craft: 'renderCraft', vendor: 'renderVendor', bank: 'renderBank', loot: 'renderLoot', settings: 'renderSettings' };
       if (this.dirtySet.has('inv')) { this.dirtySet.add('vendor'); this.dirtySet.add('craft'); this.dirtySet.add('char'); }
       if (this.dirtySet.has('gold')) { this.dirtySet.add('vendor'); this.dirtySet.add('char'); this.dirtySet.add('inv'); }
       for (const n of this.dirtySet) if (map[n] && this.wins[n]) this[map[n]]();
@@ -483,6 +500,40 @@ const UI = {
       h += `<div class="cx-entry ${found ? '' : 'unk'}">${found ? this.slotHTML(fake, 'codex') : `<div class="slot"><img src="${e.art ? Art.baseIcon(e.base) : Art.baseIcon(e.base)}" class="sil"></div>`}<div class="cx-name">${found ? U.esc(e.art ? ARTIFACT_BY_ID[e.art].name : BASES[e.base].name) : '???'}</div>${pips}</div>`;
     }
     this.body('codex').innerHTML = h + '</div>';
+  },
+  openBestiary() { this.win('bestiary', 'Bestiary', 640); this.renderBestiary(); },
+  renderBestiary() {
+    const P = Game.player, ids = Object.keys(MONSTERS);
+    const found = ids.filter((m) => P.kills[m] > 0).length;
+    if (!this.beastSel) this.beastSel = ids.find((m) => P.kills[m] > 0) || ids[0];
+    let h = `<div class="row between"><span class="muted">Discovered <b>${found}</b> / ${ids.length} creatures</span><span class="small">${HUNT_RANKS.map((r) => `<b style="color:${r.color}">${r.name}</b> ${r.kills}`).join(' · ')}</span></div><div class="beast">`;
+    h += '<div class="beast-grid">';
+    for (const m of ids) {
+      const k = P.kills[m] || 0, r = Player.huntRank(m), def = MONSTERS[m];
+      h += `<div class="beast-card ${m === this.beastSel ? 'on' : ''} ${k ? '' : 'unk'}" data-act="beastsel" data-mon="${m}" style="--c:${r >= 0 ? HUNT_RANKS[r].color : '#3a3026'}">
+        <img src="${Art.monster(m)}"><div class="bc-name">${k ? U.esc(def.name) : '???'}</div><div class="pips">${HUNT_RANKS.map((x, i) => `<i style="background:${i <= r ? x.color : '#2a2622'}"></i>`).join('')}</div></div>`;
+    }
+    h += '</div>';
+    const m = this.beastSel, def = MONSTERS[m], k = P.kills[m] || 0, r = Player.huntRank(m), next = HUNT_RANKS[r + 1];
+    h += `<div class="beast-detail"><img class="bd-pic ${k ? '' : 'unk'}" src="${Art.monster(m)}">`;
+    h += `<div class="bd-name">${k ? U.esc(def.name) : 'Unknown creature'}</div><div class="muted small">${['Harmless', 'Weak', 'Dangerous', 'Deadly', 'Legendary boss'][def.tier]}${r >= 0 ? ` · <b style="color:${HUNT_RANKS[r].color}">${HUNT_RANKS[r].name}</b>` : ''} · ${k} slain</div>`;
+    if (next) h += `<div class="bn-bar"><div style="width:${Math.min(100, k / next.kills * 100)}%"></div><span>${k} / ${next.kills} → ${next.name}</span></div><div class="muted small">${next.desc}</div>`;
+    else h += `<div class="muted small" style="color:#ffb84a">Title earned: "${Player.baneTitle(m)}"</div>`;
+    if (k) h += `<p class="bd-lore">${U.esc(MONSTER_LORE[m] || '')}</p>`;
+    else h += `<p class="muted small">Slay one to add it to your Bestiary.</p>`;
+    if (r >= 1) {
+      const L = def.loot || {};
+      const habitat = def.boss ? (BOSS_LAIRS.find((b) => b.id === m) || {}).name : Object.entries(SPAWNS).filter(([, tiers]) => tiers.some((t) => t.includes(m))).map(([b]) => b).join(', ');
+      h += `<div class="stats-grid two">${[['Health', def.hp], ['Damage', def.dmg.join('–')], ['Armor', def.ar], ['Attack', def.atk], ['Behavior', def.passive ? 'Flees' : def.aggro ? 'Aggressive' : 'Defensive'], ['Tameable', def.tame ? `${def.tame.diff}${def.mount ? ', rideable' : ''}` : 'No'], ['Habitat', habitat], ['Ranged', def.ranged ? 'Yes' : 'No']].map(([a, b]) => `<div class="st-row"><span>${a}</span><b>${b}</b></div>`).join('')}</div>`;
+      const drops = [];
+      if (L.gold && L.gold[1]) drops.push(`${L.gold[0]}–${L.gold[1]} gold`);
+      for (const [id, ch] of L.mats || []) drops.push(`${BASES[id].name} (${Math.round(ch * 100)}%)`);
+      if (L.gear) drops.push(`Gear ${Math.round(Math.min(1, L.gear) * 100)}%${L.rolls > 1 ? ' ×' + L.rolls : ''}`);
+      if (L.trophy) drops.push(`<b style="color:#ffd94a">${BASES[L.trophy].name}</b> (rare)`);
+      for (const a of L.artifacts || []) drops.push(`<b style="color:${RARITY[5].color}">${ARTIFACT_BY_ID[a].name}</b>`);
+      h += `<div class="sk-cat">Drops</div><div class="small">${drops.join(' · ') || 'Nothing of value.'}</div>`;
+    } else if (k) h += `<p class="muted small">Slay ${10 - k} more to study its stats and loot.</p>`;
+    this.body('bestiary').innerHTML = h + '</div></div>';
   },
   openBounties() { Player.ensureBounties(); this.win('bounty', 'Bounty Board', 420); this.renderBounties(); },
   renderBounties() {
@@ -686,7 +737,7 @@ const UI = {
       <tr><td>Tab / Esc</td><td>Next target / clear target and close windows</td></tr>
       <tr><td>Space</td><td>Loot the nearest corpse</td></tr>
       <tr><td>R</td><td>Mount / dismount</td></tr>
-      <tr><td>C I K J B P U M</td><td>Character, Backpack, Skills, Codex, Bounties, Pets, Crafting, Map</td></tr>
+      <tr><td>C I K J L B P U M</td><td>Character, Backpack, Skills, Codex, Bestiary, Bounties, Pets, Crafting, Map</td></tr>
       <tr><td>Mouse wheel</td><td>Zoom</td></tr></table>
       <div class="sk-cat">Tips</div>
       <ul><li>Skills rise when you use them. Harder targets teach more.</li>

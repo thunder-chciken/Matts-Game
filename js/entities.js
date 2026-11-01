@@ -124,6 +124,7 @@ function attack(att, tgt) {
 }
 function damage(tgt, amt, src, color) {
   if (tgt.dead) return;
+  if (src && src.kind === 'player' && tgt.mon && tgt.kind === 'mob') amt = Math.max(1, Math.round(amt * (1 + Player.huntBonus(tgt.mon) / 100)));
   tgt.hp -= amt; tgt.flash = 0.15;
   Game.text(tgt, String(amt), color || (tgt.kind === 'player' ? '#ff5a4a' : tgt.kind === 'pet' ? '#ffb07a' : '#fff4d0'), tgt.kind === 'player' ? 12 : 11);
   if (tgt.kind === 'player') { Sound.play('hurt'); Player.onHurt(src); }
@@ -156,7 +157,7 @@ function kill(e, src) {
     const corpse = { id: e.id, x: e.x, y: e.y, items: loot.items, gold: loot.gold, life: def.boss ? 300 : 90, color: def.look.color || def.look.skin || def.look.chest || '#6a5a4a', name: def.name, bestR: 0 };
     corpse.bestR = corpse.items.reduce((m, it) => Math.max(m, BASES[it.base].stack ? 0 : (it.r || 0)), 0);
     Game.corpses.push(corpse);
-    P.kills[e.mon] = (P.kills[e.mon] || 0) + 1;
+    if (!e.summoned) { P.kills[e.mon] = (P.kills[e.mon] || 0) + 1; Player.onKillRank(e.mon); }
     Player.bountyEvent('kill', { mon: e.mon });
     if (def.boss) {
       UI.toast(`${def.name} has been slain!`, '#ffb84a', 'Its hoard awaits.');

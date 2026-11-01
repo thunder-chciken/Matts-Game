@@ -427,6 +427,38 @@ const MONSTERS = {
     ranged: { range: 7, dmg: [28, 45], color: '#ff4a1a', cd: 3.5, breath: true },
     loot: { gold: [1200, 2200], mats: [['hide_scaled', 1, 6, 10]], gear: 1, rolls: 6, minR: 2, trophy: 'tr_cinder', trophyChance: 0.5, artifacts: ['cinderheart', 'titanmaul', 'bloodfang', 'dawnbringer'], artChance: 0.35 } },
 };
+// ---------- Bestiary ----------
+const HUNT_RANKS = [
+  { kills: 1, name: 'Discovered', desc: 'Portrait and lore unlocked.', color: '#cfcfcf', bonus: 0 },
+  { kills: 10, name: 'Studied', desc: 'Stats, habitat and full loot table revealed.', color: '#4ade6a', bonus: 0 },
+  { kills: 50, name: 'Mastered', desc: '+5% damage against this creature.', color: '#4aa8ff', bonus: 5 },
+  { kills: 150, name: 'Bane', desc: '+10% damage against this creature and a title.', color: '#ffb84a', bonus: 10 },
+];
+const MONSTER_LORE = {
+  rabbit: 'Twitchy and quick. Hunters swear the rare lucky ones carry a little fortune in their feet.',
+  deer: 'Grazes the meadows at dawn. Its hide and antlers are prized by tailors and collectors alike.',
+  horse: 'Untamed herds run free across the vale. A patient tamer can earn a loyal mount.',
+  rat: 'Grown fat on spilled grain and worse. Never alone for long.',
+  crab: 'Scuttles along the eastern shore. Its shell shimmers in colors no dye can match.',
+  wolf: 'Hunts in packs along the forest edge. Their fangs are a hunter\'s first trophy.',
+  bear: 'Mostly peaceful, until provoked. Tamed bears make sturdy companions.',
+  slime: 'A wandering stomach. Whatever it eats, it keeps: coins, bones, sometimes better.',
+  spider: 'Weaves silk finer than any loom. Tailors pay well for it, if you survive the harvest.',
+  bandit: 'Preys on travelers along the roads. Their purses are rarely their own.',
+  zombie: 'The swamp does not let its dead rest. Slow, relentless and hungry.',
+  skeleton: 'Old soldiers of a forgotten war, still guarding the crypt roads.',
+  direwolf: 'Larger, older and crueler than its kin. Its eyes burn in the dark woods.',
+  grizzly: 'The undisputed lord of the deep forest. Thick hide, thicker temper.',
+  tusker: 'Brutish Bogrunts raid from the hills, hoarding stolen gear in their camps.',
+  captain: 'Leads the bandit gangs with a sharp blade and a sharper tongue.',
+  bonemage: 'A dead sorcerer who never stopped studying. Its frost bolts strike from afar.',
+  wraith: 'A shadow bound to the mortal world. Its essence is woven into shadowsilk.',
+  ogre: 'Slow-witted and enormous. Each swing of its club can shatter a shield.',
+  troll: 'Its wounds close as fast as you open them. Strike hard and do not stop.',
+  drake: 'Young dragonkin of the high peaks. Tame one, and the skies tremble.',
+  hollowking: 'Once a ruler, now a hollow crown on a throne of bones. His crypt hoards relics of a lost age.',
+  cindermaw: 'The eldest dragon of the northern peaks. Its roost glitters with melted gold.',
+};
 // Spawn tables by biome & tier
 const SPAWNS = {
   plains: [['rabbit', 'deer', 'rat', 'horse'], ['wolf', 'bandit', 'slime', 'deer'], ['captain', 'tusker', 'grizzly', 'bandit'], ['ogre', 'troll', 'captain']],

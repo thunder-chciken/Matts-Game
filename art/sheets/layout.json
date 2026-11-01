@@ -181,5 +181,48 @@
   ],
   "out": "portraits",
   "opaque": true
+ },
+ "monsters1": {
+  "ids": [
+   "rabbit",
+   "deer",
+   "horse",
+   "rat",
+   "crab",
+   "wolf",
+   "bear",
+   "slime",
+   "spider",
+   "bandit",
+   "zombie",
+   "skeleton"
+  ],
+  "grid": [
+   4,
+   3
+  ],
+  "out": "monsters",
+  "opaque": true
+ },
+ "monsters2": {
+  "ids": [
+   "direwolf",
+   "grizzly",
+   "tusker",
+   "captain",
+   "bonemage",
+   "wraith",
+   "ogre",
+   "troll",
+   "drake",
+   "hollowking",
+   "cindermaw"
+  ],
+  "grid": [
+   4,
+   3
+  ],
+  "out": "monsters",
+  "opaque": true
  }
 }

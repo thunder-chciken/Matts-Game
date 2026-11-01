@@ -32,5 +32,10 @@ for n, sheet in enumerate(sheets, 1):
 # profession portraits: one 4x2 landscape sheet, kept opaque
 layout['portraits'] = {'ids': ['warrior', 'mage', 'smith', 'ranger', 'tamer', 'fisher', 'alchemist', 'tailor'],
                        'grid': [4, 2], 'out': 'portraits', 'opaque': True}
+# monster portraits for the bestiary: two 4x3 landscape sheets, kept opaque
+mons = ['rabbit', 'deer', 'horse', 'rat', 'crab', 'wolf', 'bear', 'slime', 'spider', 'bandit', 'zombie', 'skeleton',
+        'direwolf', 'grizzly', 'tusker', 'captain', 'bonemage', 'wraith', 'ogre', 'troll', 'drake', 'hollowking', 'cindermaw']
+layout['monsters1'] = {'ids': mons[:12], 'grid': [4, 3], 'out': 'monsters', 'opaque': True}
+layout['monsters2'] = {'ids': mons[12:], 'grid': [4, 3], 'out': 'monsters', 'opaque': True}
 (root / 'sheets' / 'layout.json').write_text(json.dumps(layout, indent=1), encoding='utf-8')
 print(len(items), 'icons in', len(sheets), 'sheets')
