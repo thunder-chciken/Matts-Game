@@ -100,6 +100,14 @@ const Sprites = {
     if (!im) { im = new Image(); im.src = 'assets/sprites/' + id + '.png'; this.propImgs['s:' + id] = im; }
     return im.complete && im.naturalWidth ? im : null;
   },
+  // Frame k of a sprite animation (assets/anims.js), e.g. animImg('h_m_shirt_shield_v0', 'r', 3)
+  animImg(id, anim, k) {
+    if (typeof ART_ANIMS === 'undefined' || !ART_ANIMS[id + '_' + anim]) return null;
+    const key = 's:' + id + '_' + anim + k;
+    let im = this.propImgs[key];
+    if (!im) { im = new Image(); im.src = 'assets/sprites/' + id + '_' + anim + k + '.png'; this.propImgs[key] = im; }
+    return im.complete && im.naturalWidth ? im : null;
+  },
   // Image object for an icon URL (painted file or generated data URL), cached
   urlImg(url) {
     let im = this.propImgs['u:' + url];

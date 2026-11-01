@@ -399,7 +399,50 @@ const Render = {
   },
   // ---------- Painted characters & creatures ----------
   // [image, world height] for an entity, or null to fall back to code-drawn
+  // 8 directions -> one of 5 painted views (views 1-3 face right in the art) + mirror
+  viewFor(e) {
+    const d = e.d8 != null ? e.d8 : (e.face.front ? (e.face.right ? 1 : 7) : (e.face.right ? 3 : 5));
+    return [[0, false], [1, false], [2, false], [3, false], [4, false], [3, true], [2, true], [1, true]][d];
+  },
+  // Weapon class a hero sprite set is painted with
+  weaponClass(e) {
+    const m = e.eq && e.eq.main ? BASES[e.eq.main.base] : null;
+    if (!m) return 'none';
+    if (m.skill === 'archery') return 'bow';
+    if (m.staff || m.id === 'spear') return 'staff';
+    if (m.skill === 'maces') return 'blunt';
+    return e.eq.off ? 'shield' : 'blade';
+  },
+  // Turnaround art: [image, height, mirror, holdsWeapon] or null
+  // Sprite sets whose side views (1-3) were painted facing left instead of right
+  VIEWS_FACE_LEFT: new Set(['h_m_shirt_shield']),
+  turnSprite(e) {
+    let [v, mirror] = this.viewFor(e);
+    let base, h = 60, holds = false;
+    if (e.kind === 'player' || e.kind === 'npc') {
+      const fem = e.look && e.look.female, g = fem ? 'f' : 'm';
+      if (e.kind === 'npc' && !['mage', 'healer', 'banker'].includes(e.role)) base = 'h_' + (fem ? 'townswoman' : 'townsman') + '_none';
+      else {
+        const ch = e.eq && e.eq.chest ? BASES[e.eq.chest.base].look : 'shirt';
+        const armor = ['robe', 'leather', 'chain', 'plate'].includes(ch) ? ch : 'shirt';
+        const wc = e.kind === 'player' ? this.weaponClass(e) : 'none';
+        for (const cand of [`h_${g}_${armor}_${wc}`, `h_${g}_${armor}_none`]) {
+          if (Sprites.spriteImg(cand + '_v' + v)) { base = cand; holds = !cand.endsWith('_none'); break; }
+        }
+      }
+    } else if (e.mon) { base = 'm_' + e.mon; h = MON_SPRITE_H[e.mon] || 50; }
+    if (!base) return null;
+    if (v >= 1 && v <= 3 && this.VIEWS_FACE_LEFT.has(base)) mirror = !mirror;
+    const im = Sprites.spriteImg(base + '_v' + v);
+    if (!im) return null;
+    // views share one scale per sheet row, so size each against the front view (a side-on wolf is lower)
+    const front = Sprites.spriteImg(base + '_v0');
+    if (front && front.naturalHeight) h *= im.naturalHeight / front.naturalHeight;
+    return [im, h, mirror, holds, base + '_v' + v];
+  },
   paintedSprite(e) {
+    const t = this.turnSprite(e);
+    if (t) return [t[0], t[1], !t[2], t[3], t[4]];
     let id, h;
     if (e.kind === 'player' || e.kind === 'npc') {
       const fem = e.look && e.look.female;
@@ -416,14 +459,34 @@ const Render = {
     // hero art faces lower-left natively; creature art faces lower-right
     return im ? [im, h, !id.startsWith('h_')] : null;
   },
-  drawPainted(e, [im, h, nativeRight], fx, fy, time, alpha) {
-    const ctx = this.ctx, w = im.naturalWidth * (h / im.naturalHeight);
-    const right = e.face.right, dir = right ? 1 : -1, mirror = right !== nativeRight;
+  // Gait frame for a turnaround view: run or walk cycle by step pace, played at the video's natural
+  // cadence at base speed (walkPh advances PI per tile). Returns [image, frame/figure height] or null.
+  gaitFrame(e, key) {
+    if (typeof ART_ANIMS === 'undefined') return null;
+    const run = (e.md || 0.3) < 0.32, has = a => ART_ANIMS[key + '_' + a];
+    const anim = has(run ? 'r' : 'w') ? (run ? 'r' : 'w') : has('w') ? 'w' : has('r') ? 'r' : null;
+    if (!anim) return null;
+    const def = ART_ANIMS[key + '_' + anim], tiles = def.sec / (anim === 'r' ? 0.23 : 0.42);
+    const k = Math.floor((e.walkPh || 0) / (Math.PI * tiles) * def.n) % def.n;
+    const im = Sprites.animImg(key, anim, k);
+    return im ? [im, def.k] : null;
+  },
+  drawPainted(e, [im, h, nativeRight, holdsWeapon, animKey], fx, fy, time, alpha) {
+    const ctx = this.ctx;
+    // between two steps mt touches 1 for a frame: keep the gait going briefly so it doesn't flicker
+    if (e.mt < 1) e.animT = time;
+    const gait = animKey && !e.mount && e.animT != null && time - e.animT < 0.12 ? this.gaitFrame(e, animKey) : null;
+    if (gait) { im = gait[0]; h *= gait[1]; }
+    const w = im.naturalWidth * (h / im.naturalHeight);
+    // turnaround sprites pass nativeRight = !mirror, so the image is mirrored exactly when needed
+    const right = holdsWeapon !== undefined ? nativeRight : e.face.right;
+    const dir = right ? 1 : -1, mirror = holdsWeapon !== undefined ? !right : right !== nativeRight;
     const moving = e.mt < 1, ph = e.walkPh || 0, seed = (e.id % 13) * 0.7;
     const def = e.def || {};
     const floaty = e.mon === 'wraith' || e.mon === 'hollowking';
     let ox = 0, oy = 0, sx = 1, sy = 1, rot = 0;
-    if (moving) { oy -= Math.abs(Math.sin(ph)) * 2.6; rot = Math.sin(ph) * 0.045; sy = 1 - Math.abs(Math.cos(ph)) * 0.025; }
+    if (gait) { /* the frames carry the stride, bob and arm swing */ }
+    else if (moving) { oy -= Math.abs(Math.sin(ph)) * 2.6; rot = Math.sin(ph) * 0.045; sy = 1 - Math.abs(Math.cos(ph)) * 0.025; }
     else sy = 1 + Math.sin(time * 2.2 + seed) * 0.012;
     if (floaty) oy -= 7 + Math.sin(time * 2 + seed) * 3;
     if (e.atkAnim >= 0) { const k = Math.sin(Math.min(1, e.atkAnim) * Math.PI); ox += dir * k * 7; oy += k * 2; sx += k * 0.05; rot += dir * k * 0.08; }
@@ -452,12 +515,12 @@ const Render = {
     };
     ctx.scale(dir, 1); // from here on +x is the facing direction
     // shield behind the body, on the far arm
-    if (e.eq && e.eq.off) this.drawHeld(e.eq.off, -w * 0.26, -h * 0.48, h * 0.42, -0.6, true);
+    if (e.eq && e.eq.off && !holdsWeapon) this.drawHeld(e.eq.off, -w * 0.26, -h * 0.48, h * 0.42, -0.6, true);
     ctx.scale(dir, 1); body(); ctx.scale(dir, 1);
     if (e.flash > 0) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, e.flash * 5) * 0.55; ctx.scale(dir, 1); body(); ctx.scale(dir, 1); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = alpha; }
     // weapon in the near hand: swings on attack, chops while gathering
     const held = e.kind === 'player' && e.action && e.action.type === 'gather' ? Player.findTool(e.action.skill) : e.eq && e.eq.main;
-    if (held) {
+    if (held && !holdsWeapon) {
       let swing = -0.15;
       if (e.atkAnim >= 0) { const a = e.atkAnim; swing = a < 0.35 ? U.lerp(-0.15, -1.3, a / 0.35) : U.lerp(-1.3, 1.0, Math.min(1, (a - 0.35) / 0.45)); }
       else if (e.action && e.action.anim) swing = U.lerp(-1.2, 0.9, (Math.sin(time * 7) + 1) / 2);

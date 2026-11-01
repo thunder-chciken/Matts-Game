@@ -59,5 +59,54 @@ layout['mobs2'] = {'ids': ['m_direwolf', 'm_grizzly', 'm_tusker', 'm_captain', '
                            'm_hollowking', 'm_cindermaw', ''], 'grid': [4, 3], 'out': 'sprites', 'sprite': True, 'max': 360}
 layout['heroes'] = {'ids': ['h_m_shirt', 'h_m_leather', 'h_m_chain', 'h_m_plate', 'h_m_robe', 'h_f_shirt', 'h_f_leather', 'h_f_chain',
                             'h_f_plate', 'h_f_robe', 'h_townsman', 'h_townswoman'], 'grid': [4, 3], 'out': 'sprites', 'sprite': True, 'max': 320}
+# 5-view turnarounds: facing viewer, 3/4 right, profile right, 3/4 back-right, back (mirrored for the left side)
+def turn(ids, mx=340):
+    return {'ids': [f'{i}_v{v}' for i in ids for v in range(5)], 'grid': [5, len(ids)], 'out': 'sprites', 'sprite': True, 'max': mx}
+layout['turn_plate'] = turn(['h_m_plate_shield', 'h_f_plate_shield'])
+layout['turn_wolfskel_b'] = turn(['m_wolf', 'm_skeleton'])
+
+ROT = ('in 5 rotations left to right: (1) facing directly toward the viewer, (2) turned three-quarters toward the viewer\'s right, '
+       '(3) full side profile facing right, (4) seen three-quarters from behind facing up and to the right, (5) seen directly from behind')
+TAIL = ('Keep each one identical across its 5 rotations. The ENTIRE background is flat solid pure magenta #FF00FF: no ground, no cast '
+        'shadows, no grid lines, no text. Gritty, highly detailed hand-painted dark-fantasy realism, moody muted colors, soft light from the top-left.')
+HEAD = ('TURNAROUND sprite sheet for a dark-fantasy isometric action RPG: ONE landscape image, a grid of 5 columns and {rows} rows of equal '
+        'cells. Each cell holds one full-body figure centered in its cell with the feet at the bottom-center, same scale in every cell, all seen '
+        'from the same classic isometric game camera looking down at about 35 degrees. ')
+
+CREATURES = {  # sheet -> [(id, description)]
+    'turn_c01': [('rabbit', 'wild brown rabbit'), ('rat', 'giant dog-sized dark-grey rat with a long scaly tail')],
+    'turn_c02': [('deer', 'tawny stag deer with branching antlers'), ('horse', 'wild chestnut horse with a dark flowing mane')],
+    'turn_c03': [('crab', 'shield-sized red-orange shore crab with big claws'), ('spider', 'giant black spider with a red hourglass mark')],
+    'turn_c04': [('bear', 'bulky black bear on all fours'), ('grizzly', 'massive brown grizzly bear on all fours, snarling')],
+    'turn_c05': [('slime', 'translucent bright green slime blob with bones floating inside'), ('wraith', 'translucent violet hooded wraith floating above the ground, fading into mist, glowing eyes')],
+    'turn_c06': [('bandit', 'hooded human bandit in dark leather holding a short sword'), ('captain', 'bandit captain in a red-lined dark coat holding a longsword')],
+    'turn_c07': [('zombie', 'shambling green-grey zombie in rags'), ('bonemage', 'skeletal bone mage in a tattered purple robe holding a staff topped by a violet flame')],
+    'turn_c08': [('direwolf', 'huge charcoal-grey dire wolf with glowing red eyes'), ('tusker', 'green-skinned tusked brute in rough hide armor holding a crude axe')],
+    'turn_c09': [('ogre', 'huge tan-skinned ogre with a heavy belly holding a gnarled wooden club'), ('troll', 'tall grey-green moss-streaked troll with long arms holding a stone-headed mace')],
+    'turn_c10': [('drake', 'red-scaled drake with folded bat wings'), ('cindermaw', 'huge dark-red horned elder dragon with an orange glowing belly and molten cracks')],
+    'turn_c11': [('hollowking', 'tall skeletal king in dark violet royal robes with a broken glowing crown holding a pale violet staff, floating above the ground')],
+}
+ARMOR = {'shirt': 'a simple linen shirt, brown trousers and leather boots', 'leather': 'brown leather armor with a belt and bracers',
+         'chain': 'an iron chain mail hauberk over a dark tunic', 'plate': 'full steel plate armor (no helmet)', 'robe': 'a deep blue hooded mage robe'}
+WEAPON = {'blade': 'holding a longsword in the right hand, left hand empty', 'shield': 'holding a longsword in the right hand and a round steel shield on the left arm',
+          'blunt': 'holding a heavy iron flanged mace in the right hand, left hand empty', 'staff': 'holding a tall wooden quarterstaff upright in the right hand',
+          'bow': 'holding a wooden longbow in the left hand', 'none': 'with empty hands, arms relaxed at the sides'}
+HERO_SETS = [(a, w) for a in ('shirt', 'leather', 'chain', 'plate') for w in ('blade', 'shield', 'blunt', 'staff', 'bow', 'none') if (a, w) != ('plate', 'shield')]
+HERO_SETS += [('robe', w) for w in ('staff', 'blade', 'none')]
+TURN_PROMPTS = {}
+for name, subs in CREATURES.items():
+    rows = ' '.join(f'{"TOP" if i == 0 else "BOTTOM"} ROW: the SAME {d} {ROT}.' for i, (_, d) in enumerate(subs))
+    TURN_PROMPTS[name] = 'Creature ' + HEAD.format(rows=len(subs)) + rows + ' ' + TAIL
+    layout[name] = turn(['m_' + i for i, _ in subs], 360)
+for a, wpn in HERO_SETS:
+    name = f'turn_h_{a}_{wpn}'
+    TURN_PROMPTS[name] = ('Character ' + HEAD.format(rows=2) + f'TOP ROW: the SAME man (short dark hair, stubble) wearing {ARMOR[a]}, {WEAPON[wpn]}, {ROT}. '
+                          f'BOTTOM ROW: the SAME woman (dark hair tied back) wearing {ARMOR[a]}, {WEAPON[wpn]}, in the same 5 rotations. Relaxed ready stance. ' + TAIL)
+    layout[name] = turn([f'h_m_{a}_{wpn}', f'h_f_{a}_{wpn}'])
+TURN_PROMPTS['turn_h_towns'] = ('Character ' + HEAD.format(rows=2) + f'TOP ROW: the SAME townsman shopkeeper (balding, beard) in a linen shirt and leather apron, '
+                                f'with empty hands, {ROT}. BOTTOM ROW: the SAME townswoman shopkeeper in a plain dress and shawl, with empty hands, in the same 5 rotations. ' + TAIL)
+layout['turn_h_towns'] = turn(['h_townsman_none', 'h_townswoman_none'])
+for name, text in TURN_PROMPTS.items():
+    (root / 'sheets' / f'{name}.txt').write_text(text, encoding='utf-8')
 (root / 'sheets' / 'layout.json').write_text(json.dumps(layout, indent=1), encoding='utf-8')
 print(len(items), 'icons in', len(sheets), 'sheets')

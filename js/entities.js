@@ -51,10 +51,14 @@ function canEnter(e, x, y) {
   if (isWild(e) && !(e.def && e.def.boss) && World.townAt(x, y) >= 0 && e.kind !== 'decor') return false;
   return true;
 }
+// Screen direction index from a tile step: 0 S, 1 SE, 2 E, 3 NE, 4 N, 5 NW, 6 W, 7 SW
+const DIR8 = { '1,1': 0, '1,0': 1, '1,-1': 2, '0,-1': 3, '-1,-1': 4, '-1,0': 5, '-1,1': 6, '0,1': 7 };
 function setFace(e, dx, dy) {
   const sdx = dx - dy, sdy = dx + dy;
   if (sdx) e.face.right = sdx > 0;
   if (sdy) e.face.front = sdy > 0;
+  const d = DIR8[Math.sign(dx) + ',' + Math.sign(dy)];
+  if (d != null) e.d8 = d;
 }
 function faceToward(e, t) { setFace(e, Math.sign(t.x - e.x), Math.sign(t.y - e.y)); }
 function stepEnt(e, dx, dy, stepTime) {

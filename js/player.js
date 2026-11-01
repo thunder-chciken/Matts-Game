@@ -138,9 +138,9 @@ const Player = {
     UI.dirty('char');
   },
   weight() { return this.P.inv.reduce((s, it) => s + Items.weight(it), 0); },
-  stepTime() {
+  stepTime(walk) {
     const P = this.P;
-    let t = P.mount ? 0.13 : 0.23;
+    let t = P.mount ? 0.13 : walk ? 0.42 : 0.23;
     t /= 1 + P.d.speed / 100;
     if (this.weight() > P.d.carry) t *= 1.7;
     if (P.stam <= 0) t *= 1.3;

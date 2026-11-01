@@ -215,11 +215,35 @@ def slice_sprites(w, h, px, spec):
     dest = ROOT / 'assets' / spec['out']; dest.mkdir(parents=True, exist_ok=True)
     cw, ch = w / cols, h / rows
     mx = spec.get('max', 320)
+    # Figures can overhang their grid cell (a side-on wolf is wide): when a row splits into exactly
+    # `cols` figures by empty columns, use those spans instead of the fixed grid.
+    spans = {}
+    for r in range(rows):
+        ya, yb = int(r * ch) + 3, int((r + 1) * ch) - 3
+        occ = [0] * w
+        for y in range(ya, yb, 2):
+            row = y * w * 4
+            for x in range(w):
+                if px[row + x * 4 + 3] > 60: occ[x] += 1
+        runs, start, gap = [], None, 0
+        for x in range(w):
+            if occ[x] > 1:
+                if start is None: start = x
+                gap = 0; end = x
+            elif start is not None:
+                gap += 1
+                if gap > 8: runs.append((start, end)); start = None
+        if start is not None: runs.append((start, end))
+        runs = [s for s in runs if s[1] - s[0] > 20]
+        if len(runs) == cols:
+            spans[r] = [(max(0, a - 4), min(w, b + 5)) for a, b in runs]
+    boxes = {}
     for k, iid in enumerate(spec['ids']):
         if not iid:
             continue
         cx, cy = k % cols, k // cols
         x0, y0, x1, y1 = int(cx * cw) + 3, int(cy * ch) + 3, int((cx + 1) * cw) - 3, int((cy + 1) * ch) - 3
+        if cy in spans: x0, x1 = spans[cy][cx]
         drop_specks(w, px, x0, y0, x1, y1)
         bx0, by0, bx1, by1 = x1, y1, x0, y0
         for y in range(y0, y1):
@@ -229,8 +253,14 @@ def slice_sprites(w, h, px, spec):
                     bx0 = min(bx0, x); bx1 = max(bx1, x); by0 = min(by0, y); by1 = max(by1, y)
         if bx1 < bx0:
             print(f'  {iid}: empty'); continue
-        sw, sh = bx1 - bx0 + 1, by1 - by0 + 1
-        s = min(1.0, mx / max(sw, sh))
+        boxes[k] = (bx0, by0, bx1 - bx0 + 1, by1 - by0 + 1)
+    # One scale per row so a turnaround's views keep their true relative size
+    row_s = {}
+    for k, (_, _, sw, sh) in boxes.items():
+        r = k // cols
+        row_s[r] = min(row_s.get(r, 1.0), mx / max(sw, sh))
+    for k, (bx0, by0, sw, sh) in boxes.items():
+        iid, s = spec['ids'][k], row_s[k // cols]
         ow, oh = max(1, round(sw * s)), max(1, round(sh * s))
         write_png(dest / f'{iid}.png', ow, oh, resample_rect(w, h, px, bx0, by0, sw, sh, ow, oh))
     print(f'sprites -> {spec["out"]}: {len([i for i in spec["ids"] if i])}')

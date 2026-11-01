@@ -125,7 +125,7 @@ const Main = {
   handleMovement() {
     const P = Game.player;
     if (P.dead || P.mt < 1) return;
-    let dx = 0, dy = 0;
+    let dx = 0, dy = 0, walk = this.shift;
     const k = this.keys;
     if (k.has('w') || k.has('arrowup')) { dx -= 1; dy -= 1; }
     if (k.has('s') || k.has('arrowdown')) { dx += 1; dy += 1; }
@@ -136,6 +136,7 @@ const Main = {
       const [sx, sy] = Render.worldToScreen(fx, fy - 20);
       const vx = this.mouse.x - sx, vy = this.mouse.y - sy;
       if (Math.hypot(vx, vy) > 18) {
+        if (Math.hypot(vx, vy) < 110) walk = true; // cursor close to the hero walks, far runs
         const sector = ((Math.round(Math.atan2(vy, vx) / (Math.PI / 4)) % 8) + 8) % 8;
         [dx, dy] = [[1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1]][sector];
       }
@@ -145,7 +146,7 @@ const Main = {
     P.path = null; P.pathGoal = null; P.pending = null;
     if (P.action && P.action.type !== 'craft') Player.cancelAction();
     if (P.action && P.action.type === 'craft') Player.cancelAction('You stop crafting.');
-    const st = Player.stepTime();
+    const st = Player.stepTime(walk);
     if (!stepEnt(P, dx, dy, st) && dx && dy) { if (!stepEnt(P, dx, 0, st)) stepEnt(P, 0, dy, st); }
   },
 
@@ -156,6 +157,7 @@ const Main = {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
       if (Game.state !== 'play') return;
       const k = e.key.toLowerCase();
+      this.shift = e.shiftKey;
       Sound.init();
       if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) { this.keys.add(k); e.preventDefault(); return; }
       if (e.repeat) return;
@@ -179,7 +181,7 @@ const Main = {
         case 'o': UI.toggle('settings'); break;
       }
     });
-    window.addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()));
+    window.addEventListener('keyup', (e) => { this.shift = e.shiftKey; this.keys.delete(e.key.toLowerCase()); });
     window.addEventListener('blur', () => { this.keys.clear(); this.mouse.hold = false; this.mouse.down = false; });
     window.addEventListener('mousemove', (e) => {
       this.mouse.x = e.clientX; this.mouse.y = e.clientY;
