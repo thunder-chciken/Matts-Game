@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hoardlands</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="ui-layer">
+    <!-- Title & creator -->
+    <div id="title" class="screen"></div>
+    <div id="creator" class="screen hidden"></div>
+
+    <!-- In-game HUD -->
+    <div id="hud" class="hidden">
+      <div id="status" class="panel">
+        <canvas id="hud-portrait" width="64" height="64"></canvas>
+        <div class="st-info">
+          <div id="hud-name"></div>
+          <div id="hud-title"></div>
+          <div class="bar" id="bar-hp"><div class="fill"></div><span class="val"></span></div>
+          <div class="bar" id="bar-mana"><div class="fill"></div><span class="val"></span></div>
+          <div class="bar" id="bar-stam"><div class="fill"></div><span class="val"></span></div>
+        </div>
+      </div>
+      <div id="buffs"></div>
+      <div id="targetframe" class="panel"></div>
+
+      <div id="mapbox" class="panel">
+        <canvas id="minimap" width="160" height="160"></canvas>
+        <div class="mb-row"><span id="hud-clock"></span><span id="hud-gold"></span></div>
+      </div>
+
+      <div id="menu">
+        <button data-open="char" data-tip="<div class=tt-name>Character</div><div class=tt-use>Paperdoll &amp; stats [C]</div>">⚔<i>C</i></button>
+        <button data-open="inv" data-tip="<div class=tt-name>Backpack</div><div class=tt-use>[I]</div>">🎒<i>I</i></button>
+        <button data-open="skills" data-tip="<div class=tt-name>Skills</div><div class=tt-use>[K]</div>">📜<i>K</i></button>
+        <button data-open="codex" data-tip="<div class=tt-name>Codex</div><div class=tt-use>Your collection [J]</div>">📖<i>J</i></button>
+        <button data-open="bounty" data-tip="<div class=tt-name>Bounties &amp; Daily Gift</div><div class=tt-use>[B]</div>">🏅<i>B</i></button>
+        <button data-open="craft" data-tip="<div class=tt-name>Crafting</div><div class=tt-use>[U]</div>">🔨<i>U</i></button>
+        <button data-open="pets" data-tip="<div class=tt-name>Pets &amp; Mounts</div><div class=tt-use>[P]</div>">🐾<i>P</i></button>
+        <button data-open="map" data-tip="<div class=tt-name>World Map</div><div class=tt-use>[M]</div>">🗺<i>M</i></button>
+        <button data-open="settings" data-tip="<div class=tt-name>Settings &amp; Save</div><div class=tt-use>[O]</div>">⚙<i>O</i></button>
+        <button data-open="help" data-tip="<div class=tt-name>Help</div><div class=tt-use>[H]</div>">?<i>H</i></button>
+      </div>
+
+      <div id="journal"></div>
+      <div id="actionbar"><div class="ab-label"></div><div class="ab-track"><div class="ab-fill"></div></div></div>
+      <div id="hotbar"></div>
+      <div id="toasts"></div>
+      <div id="banner"></div>
+      <div id="death"><div class="d-title">You have died</div><div class="d-sub"></div><button class="btn big gold" data-act="respawn">Return to the Shrine</button></div>
+    </div>
+    <div id="tooltip"></div>
+  </div>
+
+  <script src="assets/manifest.js"></script>
+  <script src="js/util.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/items.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/sprites.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/crafting.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/creator.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
