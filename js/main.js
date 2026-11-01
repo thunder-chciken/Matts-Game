@@ -210,7 +210,7 @@ const Main = {
       const opts = this.contextFor(pk);
       if (opts.length) UI.ctxMenu(e.clientX, e.clientY, opts);
     });
-    cv.addEventListener('wheel', (e) => { Render.zoom = U.clamp(Render.zoom * (e.deltaY > 0 ? 0.9 : 1.1), 0.8, 2.6); e.preventDefault(); }, { passive: false });
+    cv.addEventListener('wheel', (e) => { Render.zoom = U.clamp(Render.zoom * (e.deltaY > 0 ? 0.9 : 1.1), 1.1, 3.2); e.preventDefault(); }, { passive: false });
   },
   contextFor(pk) {
     const P = Game.player, o = [];

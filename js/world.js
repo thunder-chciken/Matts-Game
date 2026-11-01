@@ -4,18 +4,18 @@
 // =====================================================================
 const G = { DEEP: 0, WATER: 1, SAND: 2, GRASS: 3, DIRT: 4, COBBLE: 5, FOREST: 6, SWAMP: 7, ROCK: 8, PLANK: 9, GRAVE: 10, ASH: 11 };
 const GROUND = [
-  { name: 'Deep Water', color: '#1d4a78', walk: false, water: true },
-  { name: 'Water', color: '#2f6fa0', walk: false, water: true },
-  { name: 'Sand', color: '#d9c48a', walk: true },
-  { name: 'Grass', color: '#5f9a3e', walk: true },
-  { name: 'Dirt Road', color: '#9a7a50', walk: true },
-  { name: 'Cobblestone', color: '#8a8a86', walk: true },
-  { name: 'Forest Floor', color: '#3f7030', walk: true },
-  { name: 'Swamp', color: '#4a5a32', walk: true },
-  { name: 'Rocky Ground', color: '#7a7064', walk: true },
-  { name: 'Planks', color: '#8a6a40', walk: true },
-  { name: 'Grave Soil', color: '#4a4038', walk: true },
-  { name: 'Ash', color: '#3a3230', walk: true },
+  { name: 'Deep Water', color: '#122c40', walk: false, water: true },
+  { name: 'Water', color: '#1f4a62', walk: false, water: true },
+  { name: 'Sand', color: '#9c8a62', walk: true },
+  { name: 'Grass', color: '#43602f', walk: true },
+  { name: 'Dirt Road', color: '#6a5236', walk: true },
+  { name: 'Cobblestone', color: '#69645c', walk: true },
+  { name: 'Forest Floor', color: '#2f4824', walk: true },
+  { name: 'Swamp', color: '#38422a', walk: true },
+  { name: 'Rocky Ground', color: '#5c554c', walk: true },
+  { name: 'Planks', color: '#5c4630', walk: true },
+  { name: 'Grave Soil', color: '#383029', walk: true },
+  { name: 'Ash', color: '#2a2321', walk: true },
 ];
 
 // ---------- Generic A* ----------

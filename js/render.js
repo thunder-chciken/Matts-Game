@@ -3,10 +3,10 @@
 //  Isometric renderer
 //  World pixel space: tile (x,y) top vertex at ((x-y)*32, (x+y)*16)
 // =====================================================================
-const WALL_COLORS = { timber: '#e6d9bc', stone: '#a29d94', wood: '#a67c4c', crypt: '#4e4a5e' };
+const WALL_COLORS = { timber: '#bfae8e', stone: '#7c776e', wood: '#7a5a38', crypt: '#3e3a4c' };
 
 const Render = {
-  zoom: 1.35, cam: { x: 0, y: 0 }, picks: [],
+  zoom: 2.0, cam: { x: 0, y: 0 }, picks: [],
   init(canvas) {
     this.canvas = canvas; this.ctx = canvas.getContext('2d');
     this.light = mkCanvas(10, 10); this.lctx = this.light.getContext('2d');
@@ -109,7 +109,7 @@ const Render = {
     for (const e of Game.ents) if (!e.hidden) this.drawOverhead(e);
     // ---- night lighting ----
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    if (night > 0.02) this.drawLighting(night, time);
+    this.drawAtmosphere(night, time);
   },
 
   diamond(x, y, col) {
@@ -482,12 +482,103 @@ const Render = {
     }
   },
 
-  // ---------- Night lighting ----------
-  drawLighting(night, time) {
+  // ---------- Atmosphere: grading, fog, motes, light radius, vignette ----------
+  initAtmosphere() {
+    // tileable fog texture from wrapped value noise
+    const S = 256, P = 6, c = mkCanvas(S, S), x = c.getContext('2d'), img = x.createImageData(S, S);
+    const wn = (u, v, s) => {
+      const xi = Math.floor(u), yi = Math.floor(v), xf = u - xi, yf = v - yi;
+      const h = (a, b) => hash2(((a % P) + P) % P, ((b % P) + P) % P, s);
+      const sm = (t) => t * t * (3 - 2 * t), uu = sm(xf), vv = sm(yf);
+      const a = h(xi, yi), b = h(xi + 1, yi), cc = h(xi, yi + 1), d = h(xi + 1, yi + 1);
+      return a + (b - a) * uu + (cc - a) * vv + (a - b - cc + d) * uu * vv;
+    };
+    for (let j = 0; j < S; j++) for (let i = 0; i < S; i++) {
+      const u = (i / S) * P, v = (j / S) * P;
+      const n = wn(u, v, 1) * 0.55 + wn(u * 2, v * 2, 2) * 0.3 + wn(u * 4, v * 4, 3) * 0.15;
+      const k = (j * S + i) * 4, a = U.clamp((n - 0.42) * 2.4, 0, 1);
+      img.data[k] = 196; img.data[k + 1] = 200; img.data[k + 2] = 212; img.data[k + 3] = a * 255;
+    }
+    x.putImageData(img, 0, 0);
+    this.fog = c;
+    this.motes = [];
+    this.lastT = 0;
+  },
+  updateMotes(time, night) {
+    const dt = Math.min(0.05, Math.max(0, time - this.lastT)); this.lastT = time;
+    const z = this.zoom, left = this.cam.x - this.W / 2 / z, top = this.cam.y - this.H / 2 / z;
+    const vw = this.W / z, vh = this.H / z;
+    const want = Math.round(40 + night * 50);
+    while (this.motes.length < want) {
+      const fly = Math.random() < night * 0.8;
+      this.motes.push({ x: left + Math.random() * vw, y: top + Math.random() * vh, vx: (Math.random() - 0.5) * (fly ? 14 : 6), vy: fly ? (Math.random() - 0.5) * 10 : -2 - Math.random() * 5,
+        t: 0, life: 4 + Math.random() * 6, fly, ph: Math.random() * 6.28 });
+    }
+    for (const m of this.motes) {
+      m.t += dt; m.x += (m.vx + Math.sin(time * 0.7 + m.ph) * 4) * dt; m.y += m.vy * dt;
+      if (m.x < left - 40 || m.x > left + vw + 40 || m.y < top - 40 || m.y > top + vh + 40) m.t = m.life;
+    }
+    // embers rising from forges, braziers and lairs
+    for (const L of World.lights) {
+      if (L.c !== '#ff9a40' && L.c !== '#ff6a2a') continue;
+      const [wx, wy] = this.feet(L.x, L.y);
+      if (wx < left - 50 || wx > left + vw + 50 || wy < top - 50 || wy > top + vh + 80) continue;
+      if (Math.random() < dt * 6) this.motes.push({ x: wx + (Math.random() - 0.5) * 16, y: wy - 20, vx: (Math.random() - 0.5) * 10, vy: -20 - Math.random() * 25, t: 0, life: 1.5 + Math.random(), ember: true, ph: Math.random() * 6 });
+    }
+    this.motes = this.motes.filter((m) => m.t < m.life);
+  },
+  drawMotes(time) {
+    const ctx = this.ctx;
+    ctx.globalCompositeOperation = 'lighter';
+    for (const m of this.motes) {
+      const f = Math.sin((m.t / m.life) * Math.PI);
+      if (m.ember) { ctx.fillStyle = `rgba(255,${120 + (f * 80) | 0},40,${0.9 * f})`; ctx.fillRect(m.x, m.y, 1.6, 1.6); continue; }
+      if (m.fly) {
+        const p = 0.5 + Math.sin(time * 3 + m.ph) * 0.5, a = f * p;
+        const g = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, 6);
+        g.addColorStop(0, `rgba(220,255,140,${0.9 * a})`); g.addColorStop(1, 'rgba(120,200,60,0)');
+        ctx.fillStyle = g; ctx.fillRect(m.x - 6, m.y - 6, 12, 12);
+      } else { ctx.fillStyle = `rgba(255,230,180,${0.35 * f})`; ctx.fillRect(m.x, m.y, 1.4, 1.4); }
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  },
+  drawAtmosphere(night, time) {
+    const ctx = this.ctx, d = this.dpr, W = this.W, H = this.H, P = Game.player;
+    if (!this.fog) this.initAtmosphere();
+    ctx.setTransform(d, 0, 0, d, 0, 0);
+    // colour grade: desaturate, warm the midtones, deepen the shadows
+    ctx.globalCompositeOperation = 'saturation'; ctx.fillStyle = 'rgba(128,128,128,0.32)'; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = 'rgba(160,100,50,0.4)'; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgb(200,196,192)'; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'source-over';
+    // drifting fog, thicker at night and in the swamp
+    const swamp = World.biome(P.x, P.y) === 'swamp' ? 0.18 : 0;
+    const fogA = 0.08 + night * 0.16 + swamp;
+    const pat = ctx.createPattern(this.fog, 'repeat');
+    for (const [sc, sp, a] of [[3.2, 6, 1], [5.5, -3.5, 0.7]]) {
+      const m = new DOMMatrix().translate(-this.cam.x * this.zoom * 0.9 + time * sp * this.zoom, -this.cam.y * this.zoom * 0.9 + time * sp * 0.3).scale(sc * this.zoom / 1.6);
+      pat.setTransform(m);
+      ctx.globalAlpha = fogA * a; ctx.fillStyle = pat; ctx.fillRect(0, 0, W, H);
+    }
+    ctx.globalAlpha = 1;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.drawLighting(0.3 + night * 0.62, time, night);
+    // motes & embers on top so they glow
+    ctx.setTransform(d * this.zoom, 0, 0, d * this.zoom, d * (W / 2 - this.cam.x * this.zoom), d * (H / 2 - this.cam.y * this.zoom));
+    this.updateMotes(time, night);
+    this.drawMotes(time);
+    // vignette
+    ctx.setTransform(d, 0, 0, d, 0, 0);
+    const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.32, W / 2, H / 2, Math.max(W, H) * 0.72);
+    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(4,3,2,${0.62 + night * 0.2})`);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  },
+  drawLighting(dark, time, night) {
     const l = this.lctx, w = this.light.width, h = this.light.height, sc = 0.5;
     l.globalCompositeOperation = 'source-over';
     l.clearRect(0, 0, w, h);
-    l.fillStyle = `rgba(6,10,30,${night})`; l.fillRect(0, 0, w, h);
+    l.fillStyle = `rgba(6,7,16,${dark})`; l.fillRect(0, 0, w, h);
     l.globalCompositeOperation = 'destination-out';
     const hole = (wx, wy, r, a = 1) => {
       const [sx, sy] = this.worldToScreen(wx, wy);
@@ -498,8 +589,9 @@ const Render = {
       l.fillStyle = g; l.fillRect(sx * sc - rr, sy * sc - rr, rr * 2, rr * 2);
     };
     const P = Game.player, [px, py] = this.visPos(P), [pfx, pfy] = this.feet(px, py);
-    hole(pfx, pfy - 20, 150, 0.85);
-    const flick = 1 + Math.sin(time * 7) * 0.04;
+    const flick = 1 + Math.sin(time * 7) * 0.04 + Math.sin(time * 17) * 0.02;
+    // the hero's light radius: wide by day, a torch-sized pool at night
+    hole(pfx, pfy - 20, U.lerp(330, 190, night) * flick, 1);
     for (const L of World.lights) { const [wx, wy] = this.feet(L.x, L.y); hole(wx, wy - 20, L.r * 32 * flick, 0.95); }
     for (const f of Game.effects) if (f.type === 'proj' && !f.arrow) { const [wx, wy] = this.feet(U.lerp(f.sx, f.tx, f.t / f.dur), U.lerp(f.sy, f.ty, f.t / f.dur)); hole(wx, wy - 26, 70, 0.8); }
     for (const e of Game.ents) if (e.def && e.def.body === 'wisp' && e._fx != null) hole(e._fx, e._fy - 24, 60, 0.6);
@@ -512,7 +604,7 @@ const Render = {
       const r = L.r * 22 * this.zoom * this.dpr * flick;
       if (sx < -r || sy < -r || sx > this.W + r || sy > this.H + r) continue;
       const g = ctx.createRadialGradient(sx * this.dpr, sy * this.dpr, 0, sx * this.dpr, sy * this.dpr, r);
-      g.addColorStop(0, U.rgba(L.c, 0.22 * night)); g.addColorStop(1, 'rgba(0,0,0,0)');
+      g.addColorStop(0, U.rgba(L.c, 0.08 + 0.24 * night)); g.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = g; ctx.fillRect(sx * this.dpr - r, sy * this.dpr - r, r * 2, r * 2);
     }
     ctx.globalCompositeOperation = 'source-over';
