@@ -220,20 +220,28 @@ const Render = {
     const hN = C[y * W + x], hE = C[y * W + x + 1], hS = C[(y + 1) * W + x + 1], hW = C[(y + 1) * W + x];
     const [nx, ny] = this.proj(x, y), [ex, ey] = this.proj(x + 1, y), [sx, sy] = this.proj(x + 1, y + 1), [qx, qy] = this.proj(x, y + 1);
     const avg = (hN + hE + hS + hW) / 4, hv = hash2(x, y, 9);
-    const base = avg > 72 ? U.mix('#9a948a', '#eef2f6', U.clamp((avg - 72) / 12, 0, 1)) : U.shade('#8a8276', (hv - 0.5) * 0.12);
+    const base = !Terrain.ready && avg > 72 ? U.mix('#9a948a', '#eef2f6', U.clamp((avg - 72) / 12, 0, 1)) : U.shade('#8a8276', (hv - 0.5) * 0.12);
     const below = World.objAt(x, y + 1), right = World.objAt(x + 1, y);
+    const tex = Terrain.ready ? Terrain.pattern(ctx, 'rocky') : null;
+    const snow = U.clamp((avg - 74) / 22, 0, 1) * 0.6;
+    // painted rock: texture first, then a shading wash for the face direction / slope
+    const paint = (fallback, wash) => {
+      if (tex) { ctx.fillStyle = tex; ctx.fill(); ctx.fillStyle = wash; ctx.fill(); if (snow > 0) { ctx.fillStyle = `rgba(226,232,238,${snow * 0.7})`; ctx.fill(); } }
+      else { ctx.fillStyle = fallback; ctx.fill(); }
+    };
     if (!(below && below.t === 'rock')) {
-      ctx.fillStyle = U.shade(base, -0.28);
-      ctx.beginPath(); ctx.moveTo(qx, qy); ctx.lineTo(sx, sy); ctx.lineTo(sx, sy - hS); ctx.lineTo(qx, qy - hW); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(qx, qy); ctx.lineTo(sx, sy); ctx.lineTo(sx, sy - hS); ctx.lineTo(qx, qy - hW); ctx.closePath();
+      paint(U.shade(base, -0.28), 'rgba(10,8,6,0.38)');
     }
     if (!(right && right.t === 'rock')) {
-      ctx.fillStyle = U.shade(base, -0.45);
-      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.lineTo(ex, ey - hE); ctx.lineTo(sx, sy - hS); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.lineTo(ex, ey - hE); ctx.lineTo(sx, sy - hS); ctx.closePath();
+      paint(U.shade(base, -0.45), 'rgba(10,8,6,0.56)');
     }
     const gx = (hE + hS - hN - hW) / 2, gy = (hW + hS - hN - hE) / 2;
-    ctx.fillStyle = U.shade(base, U.clamp(gx * 0.012 - gy * 0.008, -0.4, 0.3));
-    ctx.beginPath(); ctx.moveTo(nx, ny - hN); ctx.lineTo(ex, ey - hE); ctx.lineTo(sx, sy - hS); ctx.lineTo(qx, qy - hW); ctx.closePath(); ctx.fill();
-    if (hv > 0.6 && avg < 72) {
+    const lit = U.clamp(gx * 0.012 - gy * 0.008, -0.4, 0.3);
+    ctx.beginPath(); ctx.moveTo(nx, ny - hN); ctx.lineTo(ex, ey - hE); ctx.lineTo(sx, sy - hS); ctx.lineTo(qx, qy - hW); ctx.closePath();
+    paint(U.shade(base, lit), lit >= 0 ? `rgba(255,240,215,${lit * 0.45})` : `rgba(10,8,6,${-lit * 0.9})`);
+    if (!tex && hv > 0.6 && avg < 72) {
       ctx.strokeStyle = 'rgba(40,30,20,0.25)'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(nx + (ex - nx) * 0.3, ny - hN * 0.9 + 8); ctx.lineTo(nx + (sx - nx) * 0.5, (ny + sy) / 2 - avg + 4); ctx.stroke();
     }
